@@ -313,13 +313,13 @@
   .pins{display:flex;flex-direction:column;gap:16px}
   .pincity h4{font-size:12px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--c);margin:0 0 8px;display:flex;align-items:center;gap:7px}
   .pincity h4 .dot{width:9px;height:9px;border-radius:50%;background:var(--c)}
-  .pinlist{display:flex;flex-wrap:wrap;gap:8px}
-  .pin{
-    display:inline-flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--line);
-    border-radius:20px;padding:5px 6px 5px 13px;font-size:13.5px;
-  }
-  .pin button{border:0;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:16px;line-height:1;padding:0 3px;border-radius:50%}
-  .pin button:hover{color:var(--osaka)}
+  .pinlist{display:flex;flex-direction:column;gap:6px}
+  .pin{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:6px 8px 6px 12px}
+  .pin .pn{flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pin select{background:var(--surface);border:1px solid var(--line);border-radius:7px;color:var(--ink-soft);font-family:var(--sans);font-size:12px;padding:5px 8px;cursor:pointer;max-width:170px}
+  .pin select:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .pin .rm{border:0;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:16px;line-height:1;padding:0 4px}
+  .pin .rm:hover{color:var(--osaka)}
   .empty{color:var(--ink-faint);font-size:13px;font-style:italic}
 
   footer{padding:40px 0 60px;text-align:center;color:var(--ink-faint);font-size:12.5px}
@@ -348,6 +348,26 @@
   .mapnote{display:none;color:var(--ink-soft);font-size:14px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:16px;line-height:1.5}
   #mapPanel.mapoff .mapbox,#mapPanel.mapoff .mapfilter{display:none}
   #mapPanel.mapoff .mapnote{display:block}
+  .wrap.wide{max-width:1240px}
+  .trip-layout{display:grid;grid-template-columns:1fr;gap:20px}
+  #mapPanel{order:-1}
+  #mapPanel .mapcard{margin:0}
+  .map-layers{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .layer-toggle{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-soft);border-radius:20px;padding:5px 12px;font-size:12.5px;cursor:pointer;user-select:none}
+  .layer-toggle .sw{width:12px;height:12px;border-radius:50%;border:2px solid var(--dotc,var(--accent));background:transparent}
+  .layer-toggle.on{color:var(--ink);border-color:var(--dotc,var(--accent))}
+  .layer-toggle.on.filled .sw{background:var(--dotc,var(--accent))}
+  .layer-toggle:not(.on){opacity:.5}
+  .layer-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .map-city-label{margin-left:auto;align-self:center;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}
+  @keyframes flashpop{0%{background:color-mix(in srgb,var(--accent) 14%,var(--surface))}100%{background:var(--surface)}}
+  .day.flash{animation:flashpop 1.3s ease}
+  @media(min-width:1000px){
+    .trip-layout{grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr);align-items:start;gap:26px}
+    #mapPanel{order:0;position:sticky;top:72px;align-self:start;height:calc(100vh - 92px)}
+    #mapPanel .mapcard{height:100%;display:flex;flex-direction:column}
+    #mapPanel .mapbox{flex:1 1 auto;height:auto;min-height:0}
+  }
   .backup-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   label.btn{cursor:pointer;display:inline-flex;align-items:center;height:42px}
   .backup-note{margin-top:12px;font-size:12.5px;color:var(--ink-faint)}
@@ -450,19 +470,25 @@
       <p><strong>Why this order (Tokyo → Osaka → Kyoto).</strong> It puts <strong>Universal on Wed–Fri</strong> and <strong>Disney on Monday</strong> — all weekdays, far lighter with a 9-year-old — and keeps the two theme parks from stacking. You mentioned flipping Osaka &amp; Kyoto to space them out; you can, but you'd trade Universal onto a Saturday. The <strong>Hiroshima day trip runs from Kyoto</strong> here. Nothing's locked — this whole page is yours to rearrange.</p>
     </div>
   </section>
+</div>
 
-  <section class="block" id="mapPanel">
-    <div class="panel">
-      <div class="panel-head">
-        <div><h2>The trip on a map</h2><p class="sub">Every stop, colour-coded by city — filter by city or a single day.</p></div>
-        <select id="mapFilter" class="mapfilter" aria-label="Filter the map"></select>
+<div class="wrap wide">
+  <div class="trip-layout">
+    <main id="itinerary"></main>
+    <aside id="mapPanel">
+      <div class="panel mapcard">
+        <div class="panel-head">
+          <div><h2>The trip on a map</h2><p class="sub">Follows the city you're reading. Show or hide layers below.</p></div>
+        </div>
+        <div class="map-layers" id="mapLayers"></div>
+        <div id="map" class="mapbox"></div>
+        <p class="mapnote" id="mapnote">🗺️ The live map runs on the deployed site (Netlify / GitHub Pages). In the claude.ai preview the map tiles are blocked by the sandbox — everything else here still works.</p>
       </div>
-      <div id="map" class="mapbox"></div>
-      <p class="mapnote" id="mapnote">🗺️ The live map runs on the deployed site (Netlify / GitHub Pages). Inside the claude.ai preview the map tiles are blocked by the sandbox — everything else on this page still works.</p>
-    </div>
-  </section>
+    </aside>
+  </div>
+</div>
 
-  <main id="itinerary"></main>
+<div class="wrap">
 
   <section class="block" id="stays">
     <div class="panel">
@@ -887,6 +913,7 @@
       editBtn.textContent=EDITING[i]?"Done":"Edit";
       card.classList.toggle("editing",!!EDITING[i]);
       renderDayItems(i,box);
+      if(!EDITING[i]&&typeof refreshItinMarkers==="function")refreshItinMarkers();
     });
     title.appendChild(editBtn);
     body.appendChild(title);
@@ -915,6 +942,15 @@
       root.appendChild(buildDayCard(i));
     });
   })();
+  function addToDay(i,place){
+    ITIN[i].push({id:"p"+Date.now()+"-"+Math.floor(Math.random()*1000),time:"",txt:place.name||"Place",note:"",badge:"",geo:(place.lat!=null&&!isNaN(place.lat))?[place.lat,place.lng]:null,done:false});
+    saveItin();
+    var box=document.querySelector("#day-"+i+" .items-box");
+    if(box)renderDayItems(i,box);
+    if(typeof refreshItinMarkers==="function")refreshItinMarkers();
+    var card=document.getElementById("day-"+i);
+    if(card){card.scrollIntoView({behavior:"smooth",block:"center"});card.classList.remove("flash");void card.offsetWidth;card.classList.add("flash");}
+  }
 
   // ---- prep checklist ----
   var checks=document.getElementById("checks");
@@ -969,7 +1005,7 @@
   function renderPins(){
     var pins=getPins();
     pinsEl.innerHTML="";
-    if(!pins.length){pinsEl.appendChild(el("div","empty","No extra places yet — add one above."));return;}
+    if(!pins.length){pinsEl.appendChild(el("div","empty","No extra places yet — import a Google My Maps KML above, or add one."));return;}
     ["tokyo","osaka","kyoto","hiroshima"].forEach(function(k){
       var group=pins.filter(function(p){return p.city===k;});
       if(!group.length)return;
@@ -980,11 +1016,16 @@
       var list=el("div","pinlist");
       group.forEach(function(p){
         var pin=el("div","pin");
-        pin.appendChild(el("span",null,p.name.replace(/</g,"&lt;")));
-        var x=el("button",null,"×");x.type="button";x.setAttribute("aria-label","Remove "+p.name);
+        pin.appendChild(el("span","pn",String(p.name||"").replace(/</g,"&lt;")));
+        var sel=el("select");sel.title="Add this place to a day";
+        var o0=el("option");o0.value="";o0.textContent="Add to day…";sel.appendChild(o0);
+        DAYS.forEach(function(d,i){if(d.city!==k)return;var f=fmt(d.date);var o=el("option");o.value=String(i);o.textContent=f.mon+" "+f.num+" · "+stripHTML(d.title);sel.appendChild(o);});
+        sel.addEventListener("change",function(){var v=sel.value;sel.value="";if(v!=="")addToDay(parseInt(v,10),p);});
+        pin.appendChild(sel);
+        var x=el("button","rm","×");x.type="button";x.setAttribute("aria-label","Remove "+(p.name||"place"));
         x.addEventListener("click",function(){
-          var all=getPins();all.splice(all.indexOf(all.filter(function(q){return q.id===p.id;})[0]),1);
-          setPins(all);renderPins();
+          setPins(getPins().filter(function(q){return q.id!==p.id;}));renderPins();
+          if(typeof addWishlistToMap==="function")addWishlistToMap();
         });
         pin.appendChild(x);
         list.appendChild(pin);
@@ -1061,62 +1102,93 @@
 
   // ---- map (Leaflet + OpenStreetMap) ----
   var MC={tokyo:"#3a4a9f",osaka:"#c26b3c",kyoto:"#6f8047",hiroshima:"#46707a"};
-  var MAPOBJ=null,WISHLAYER=null;
+  var MAPOBJ=null,ITINLAYER=null,WISHLAYER=null,ITINMARKERS=[],SCRATCHMARKERS=[];
+  var LAYERON={itin:true,scratch:true},CURCITY=null;
   function stripHTML(s){var t=document.createElement("div");t.innerHTML=s;return t.textContent||t.innerText||s;}
-  function buildFilter(){
-    var sel=document.getElementById("mapFilter");if(!sel)return;
-    var html='<option value="all">All places</option><optgroup label="By city">';
-    ["tokyo","osaka","kyoto","hiroshima"].forEach(function(k){html+='<option value="city:'+k+'">'+CITIES[k].name+'</option>';});
-    html+='</optgroup><optgroup label="By day">';
-    DAYS.forEach(function(d,i){var f=fmt(d.date);html+='<option value="day:'+i+'">Day '+(i+1)+' · '+f.mon+' '+f.num+' — '+stripHTML(d.title)+'</option>';});
-    sel.innerHTML=html+'</optgroup>';
-  }
-  function initMap(){
-    var panel=document.getElementById("mapPanel");if(!panel)return;
-    buildFilter();
-    if(typeof L==="undefined"){panel.classList.add("mapoff");return;}
-    var map=L.map("map",{scrollWheelZoom:false}).setView([36.5,137.8],5);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"}).addTo(map);
-    MAPOBJ=map;WISHLAYER=L.layerGroup().addTo(map);
-    var markers=[];
-    ITIN.forEach(function(items,i){
-      var d=DAYS[i],f=fmt(d.date),col=MC[d.city]||"#3a4a9f";
-      items.forEach(function(it){
-        if(!it.geo)return;
-        var m=L.circleMarker(it.geo,{radius:8,weight:2,color:"#fff",opacity:1,fillColor:col,fillOpacity:1});
-        m._city=d.city;m._day=i;
-        m.bindPopup('<b>'+stripHTML(it.txt)+'</b><br><span style="opacity:.7">Day '+(i+1)+' · '+f.mon+' '+f.num+' · '+esc(it.time)+'</span>');
-        m.addTo(map);markers.push(m);
-      });
-    });
-    function fit(list){var pts=list.map(function(m){return m.getLatLng();});if(pts.length)map.fitBounds(L.latLngBounds(pts).pad(0.18));}
-    fit(markers);
-    document.getElementById("mapFilter").addEventListener("change",function(){
-      var v=this.value,vis=[];
-      markers.forEach(function(m){
-        var show=v==="all"||(v.indexOf("city:")===0&&m._city===v.slice(5))||(v.indexOf("day:")===0&&m._day===parseInt(v.slice(4),10));
-        if(show){m.addTo(map);vis.push(m);}else{map.removeLayer(m);}
-      });
-      fit(vis.length?vis:markers);
-    });
-    addWishlistToMap();
-    setTimeout(function(){map.invalidateSize();},250);
-  }
   function cityForCoords(lat,lng){
     var C={tokyo:[35.68,139.76],osaka:[34.69,135.50],kyoto:[35.01,135.77],hiroshima:[34.39,132.45]},best="tokyo",bd=Infinity;
     Object.keys(C).forEach(function(k){var d=Math.pow(lat-C[k][0],2)+Math.pow(lng-C[k][1],2);if(d<bd){bd=d;best=k;}});
     return best;
   }
+  function refreshItinMarkers(){
+    if(!MAPOBJ||!ITINLAYER||typeof L==="undefined")return;
+    ITINLAYER.clearLayers();ITINMARKERS=[];
+    ITIN.forEach(function(items,i){
+      var d=DAYS[i],f=fmt(d.date),col=MC[d.city]||"#3a4a9f";
+      items.forEach(function(it){
+        if(!it.geo)return;
+        var m=L.circleMarker(it.geo,{radius:8,weight:2,color:"#fff",opacity:1,fillColor:col,fillOpacity:1});
+        m._city=d.city;
+        m.bindPopup('<b>'+stripHTML(it.txt)+'</b><br><span style="opacity:.7">Day '+(i+1)+' · '+f.mon+' '+f.num+(it.time?' · '+esc(it.time):'')+'</span>');
+        ITINLAYER.addLayer(m);ITINMARKERS.push(m);
+      });
+    });
+  }
   function addWishlistToMap(){
     if(!MAPOBJ||!WISHLAYER||typeof L==="undefined")return;
-    WISHLAYER.clearLayers();
+    WISHLAYER.clearLayers();SCRATCHMARKERS=[];
     getPins().forEach(function(p){
       if(p.lat==null||p.lng==null||isNaN(p.lat)||isNaN(p.lng))return;
       var col=MC[p.city]||"#3a4a9f";
-      var m=L.circleMarker([p.lat,p.lng],{radius:6,weight:2,color:col,fillColor:"#fff",fillOpacity:1});
-      m.bindPopup('<b>'+String(p.name||"Place").replace(/</g,"&lt;")+'</b><br><span style="opacity:.7">From your Google Map · '+(CITIES[p.city]?CITIES[p.city].name:"")+'</span>');
-      WISHLAYER.addLayer(m);
+      var m=L.circleMarker([p.lat,p.lng],{radius:6,weight:2,color:col,fillColor:"#fff",fillOpacity:1,dashArray:"2 3"});
+      m._city=p.city;
+      m.bindPopup('<b>'+String(p.name||"Place").replace(/</g,"&lt;")+'</b><br><span style="opacity:.7">Scratchpad · '+(CITIES[p.city]?CITIES[p.city].name:"")+'</span>');
+      WISHLAYER.addLayer(m);SCRATCHMARKERS.push(m);
     });
+  }
+  function applyLayers(){
+    if(!MAPOBJ)return;
+    if(LAYERON.itin){if(!MAPOBJ.hasLayer(ITINLAYER))ITINLAYER.addTo(MAPOBJ);}else if(MAPOBJ.hasLayer(ITINLAYER))MAPOBJ.removeLayer(ITINLAYER);
+    if(LAYERON.scratch){if(!MAPOBJ.hasLayer(WISHLAYER))WISHLAYER.addTo(MAPOBJ);}else if(MAPOBJ.hasLayer(WISHLAYER))MAPOBJ.removeLayer(WISHLAYER);
+  }
+  function focusCity(city){
+    if(!MAPOBJ||typeof L==="undefined")return;
+    CURCITY=city;
+    var pts=[];
+    if(LAYERON.itin)ITINMARKERS.forEach(function(m){if(m._city===city)pts.push(m.getLatLng());});
+    if(LAYERON.scratch)SCRATCHMARKERS.forEach(function(m){if(m._city===city)pts.push(m.getLatLng());});
+    if(!pts.length)ITINMARKERS.forEach(function(m){if(m._city===city)pts.push(m.getLatLng());});
+    if(pts.length)MAPOBJ.flyToBounds(L.latLngBounds(pts).pad(0.25),{duration:.6,maxZoom:14});
+    var lbl=document.getElementById("mapCityLabel");if(lbl)lbl.textContent=CITIES[city]?CITIES[city].name:"";
+  }
+  function buildLayerToggles(){
+    var host=document.getElementById("mapLayers");if(!host)return;
+    host.innerHTML="";
+    function tog(key,label,filled,dot){
+      var b=el("button","layer-toggle"+(filled?" filled":"")+(LAYERON[key]?" on":""));
+      b.type="button";b.style.setProperty("--dotc",dot);
+      b.innerHTML='<span class="sw"></span>'+label;
+      b.setAttribute("aria-pressed",LAYERON[key]?"true":"false");
+      b.addEventListener("click",function(){LAYERON[key]=!LAYERON[key];b.classList.toggle("on",LAYERON[key]);b.setAttribute("aria-pressed",LAYERON[key]?"true":"false");applyLayers();});
+      host.appendChild(b);
+    }
+    tog("itin","Itinerary stops",true,"var(--accent)");
+    tog("scratch","Scratchpad places",false,"var(--ink-soft)");
+    var lbl=el("span","map-city-label");lbl.id="mapCityLabel";host.appendChild(lbl);
+  }
+  function setupScrollFollow(){
+    if(!("IntersectionObserver" in window))return;
+    var seen={};
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){seen[e.target.id]=e.isIntersecting?e.intersectionRatio:0;});
+      var bestId=null,best=0;
+      Object.keys(seen).forEach(function(id){if(seen[id]>best){best=seen[id];bestId=id;}});
+      if(bestId){var i=parseInt(bestId.split("-")[1],10),city=DAYS[i]&&DAYS[i].city;if(city&&city!==CURCITY)focusCity(city);}
+    },{root:null,threshold:[0.2,0.5,0.8],rootMargin:"-8% 0px -55% 0px"});
+    for(var i=0;i<DAYS.length;i++){var d=document.getElementById("day-"+i);if(d)io.observe(d);}
+  }
+  function initMap(){
+    var panel=document.getElementById("mapPanel");if(!panel)return;
+    buildLayerToggles();
+    if(typeof L==="undefined"){panel.classList.add("mapoff");return;}
+    var map=L.map("map",{scrollWheelZoom:false}).setView([36.5,137.8],5);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"}).addTo(map);
+    MAPOBJ=map;ITINLAYER=L.layerGroup().addTo(map);WISHLAYER=L.layerGroup().addTo(map);
+    refreshItinMarkers();addWishlistToMap();applyLayers();
+    var all=ITINMARKERS.map(function(m){return m.getLatLng();});
+    if(all.length)map.fitBounds(L.latLngBounds(all).pad(0.2));
+    setupScrollFollow();
+    setTimeout(function(){map.invalidateSize();},250);
   }
   initMap();
 
