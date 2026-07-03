@@ -620,7 +620,7 @@
           <button class="btn" id="syncConnect" type="button">Connect</button>
         </div>
         <div class="sync-connected" id="syncConnected" hidden>
-          <span>Syncing as <strong id="syncCodeShow"></strong> — enter the same URL &amp; code on your other devices. Refresh a device to pull the latest.</span>
+          <span>Syncing as <strong id="syncCodeShow"></strong> — enter the same URL &amp; code on your other devices. Changes now sync automatically within a few seconds.</span>
           <button class="btn ghost" id="syncDisconnect" type="button">Disconnect</button>
         </div>
       </div>
@@ -1445,36 +1445,63 @@
   var statusEl=document.getElementById("syncStatus");
   function setStatus(t,cls){if(!statusEl)return;statusEl.textContent=t;statusEl.className="sync-status"+(cls?" "+cls:"");}
   var SYNC={
-    applying:false,timer:null,
+    applying:false,timer:null,polling:null,
     endpoint:function(){var u=LS.get("syncUrl",""),c=LS.get("syncCode","");if(!u||!c)return null;return u.replace(/\/+$/,"")+"/japan/"+encodeURIComponent(c)+".json";},
     on:function(){return !!(LS.get("syncUrl","")&&LS.get("syncCode",""));},
     collect:function(){var d={};for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(isOurs(k))d[k]=localStorage.getItem(k);}return d;},
-    push:function(){
-      var u=this.endpoint();if(!u)return;
-      var payload={data:this.collect(),updated:Date.now()};
-      try{localStorage.setItem("syncUpdated",String(payload.updated));}catch(e){}
-      setStatus("saving…");
-      fetch(u,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
-        .then(function(r){if(!r.ok)throw 0;setStatus("synced ✓","ok");})
-        .catch(function(){setStatus("offline — will retry on next change","warn");});
+    // version is a plain integer, NOT a clock — every write is max(local,remote)+1, so it can never
+    // go backwards no matter how far apart two devices' clocks are.
+    localV:function(){return parseInt(LS.get("syncV","0"),10)||0;},
+    userBusy:function(){
+      if(this.timer)return true;                                  // a local change is still queued to push
+      var a=document.activeElement;
+      if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return true;
+      if(document.querySelector(".day.editing"))return true;
+      return false;
     },
-    queue:function(){var s=this;clearTimeout(s.timer);s.timer=setTimeout(function(){s.push();},1500);},
+    push:function(){
+      var u=this.endpoint();if(!u)return;var s=this;
+      setStatus("saving…");
+      // read the current remote version first, then bump past it — this is what fixes cross-device clock skew
+      fetch(u).then(function(r){return r.ok?r.json():null;}).then(function(j){
+        var remoteV=(j&&j.v)||0,newV=Math.max(s.localV(),remoteV)+1;
+        var payload={data:s.collect(),v:newV,updated:Date.now()};
+        return fetch(u,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).then(function(r){
+          if(!r.ok)throw 0;
+          try{localStorage.setItem("syncV",String(newV));}catch(e){}
+          setStatus("synced ✓","ok");
+        });
+      }).catch(function(){setStatus("offline — will retry on next change","warn");});
+    },
+    queue:function(){var s=this;clearTimeout(s.timer);s.timer=setTimeout(function(){s.timer=null;s.push();},1200);},
     pull:function(cb){
       var u=this.endpoint();if(!u){cb&&cb(false);return;}
       var s=this;setStatus("connecting…");
       fetch(u).then(function(r){return r.ok?r.json():null;}).then(function(j){
         if(j&&j.data){
-          var localU=parseInt(LS.get("syncUpdated","0"),10)||0,remoteU=j.updated||0;
-          if(remoteU>localU){
+          var localV=s.localV(),remoteV=(j.v)||0;
+          if(remoteV>localV){
             s.applying=true;
             Object.keys(j.data).forEach(function(k){if(isOurs(k)){try{localStorage.setItem(k,j.data[k]);}catch(e){}}});
-            try{localStorage.setItem("syncUpdated",String(remoteU));}catch(e){}
-            s.applying=false;cb&&cb(true,"remote");
-          }else if(localU>remoteU){s.push();cb&&cb(true,"local");}
+            try{localStorage.setItem("syncV",String(remoteV));}catch(e){}
+            s.applying=false;setStatus("synced ✓","ok");cb&&cb(true,"remote");
+          }else if(localV>remoteV){s.push();cb&&cb(true,"local");}
           else{setStatus("synced ✓","ok");cb&&cb(true,"same");}
         }else{s.push();cb&&cb(true,"new");}
       }).catch(function(){setStatus("couldn't reach the database — check the URL","warn");cb&&cb(false);});
-    }
+    },
+    poll:function(){
+      if(!this.on()||this.applying||this.userBusy())return;      // never yank the page out from under an active edit
+      if(document.visibilityState==="hidden")return;             // and don't burn quota on backgrounded tabs
+      var s=this;
+      this.pull(function(ok,how){if(ok&&how==="remote"&&!s.userBusy())location.reload();});
+    },
+    startPolling:function(){
+      var s=this;if(s.polling||!s.on())return;
+      s.polling=setInterval(function(){s.poll();},15000);
+      document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")s.poll();});
+    },
+    stopPolling:function(){if(this.polling){clearInterval(this.polling);this.polling=null;}}
   };
   window.__syncOnChange=function(k){
     if(SYNC.applying)return;
@@ -1503,12 +1530,15 @@
       if(!ok)return;
       renderSyncUI();
       if(how==="remote"){setStatus("pulled the shared plan — reloading…","ok");setTimeout(function(){location.reload();},700);}
-      else{setStatus("synced ✓ — share your code","ok");}
+      else{setStatus("synced ✓ — share your code","ok");SYNC.startPolling();}
     });
   });
   var sd=document.getElementById("syncDisconnect");
-  if(sd)sd.addEventListener("click",function(){LS.del("syncUrl");LS.del("syncCode");LS.del("syncUpdated");renderSyncUI();});
+  if(sd)sd.addEventListener("click",function(){SYNC.stopPolling();LS.del("syncUrl");LS.del("syncCode");LS.del("syncV");LS.del("syncUpdated");renderSyncUI();});
   renderSyncUI();
-  if(SYNC.on())SYNC.pull(function(ok,how){if(ok&&how==="remote")location.reload();else renderSyncUI();});
+  if(SYNC.on()){
+    SYNC.startPolling();
+    SYNC.pull(function(ok,how){if(ok&&how==="remote")location.reload();else renderSyncUI();});
+  }
 })();
 </script>
