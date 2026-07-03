@@ -325,6 +325,8 @@
   footer{padding:40px 0 60px;text-align:center;color:var(--ink-faint);font-size:12.5px}
   footer .jp{font-family:var(--serif);font-size:1.1rem;color:var(--ink-soft)}
 
+  /* ---- mobile city spine (fixed left rail, highlights on scroll) ---- */
+  .city-spine{display:none}
   @media (max-width:640px){
     .day{grid-template-columns:1fr;gap:14px;padding:18px}
     .day .rail{flex-direction:row;align-items:baseline;gap:10px;padding-left:12px}
@@ -332,6 +334,37 @@
     .day .rail .cityname{margin-top:0;margin-left:auto}
     li.item{grid-template-columns:24px 56px 1fr;gap:9px}
     .hero{padding:36px 0 22px}
+
+    .city-spine{
+      position:fixed;left:6px;top:64px;bottom:16px;z-index:15;
+      display:flex;flex-direction:column;gap:6px;align-items:flex-start;
+      pointer-events:none;
+    }
+    .cs-seg{
+      flex:1 1 auto;width:6px;min-height:20px;border:0;padding:0;margin:0;
+      display:flex;align-items:center;justify-content:center;overflow:hidden;
+      pointer-events:auto;cursor:pointer;-webkit-tap-highlight-color:transparent;
+      background:var(--c);opacity:.3;border-radius:6px;
+      transition:opacity .35s ease,width .35s ease,box-shadow .35s ease;
+    }
+    .cs-seg.active{
+      opacity:1;width:20px;
+      box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 18%,transparent),0 3px 10px -3px var(--c);
+    }
+    .cs-lab{
+      writing-mode:vertical-rl;font-family:var(--mono);font-size:9.5px;font-weight:600;
+      letter-spacing:.16em;text-transform:uppercase;white-space:nowrap;
+      color:#fff;text-shadow:0 1px 1.5px rgba(0,0,0,.32);
+      opacity:0;transition:opacity .3s ease .05s;pointer-events:none;
+    }
+    .cs-seg.active .cs-lab{opacity:1}
+    .cs-seg:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  }
+  /* spine label stays readable on the lighter city colours in dark mode */
+  :root[data-theme="dark"] .cs-lab{color:#15171e;text-shadow:none}
+  :root[data-theme="light"] .cs-lab{color:#fff;text-shadow:0 1px 1.5px rgba(0,0,0,.32)}
+  @media (max-width:640px) and (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]) .cs-lab{color:#15171e;text-shadow:none}
   }
   @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
   .reveal{opacity:0;transform:translateY(10px)}
@@ -350,7 +383,8 @@
   #mapPanel.mapoff .mapnote{display:block}
   .wrap.wide{max-width:1240px}
   .trip-layout{display:grid;grid-template-columns:1fr;gap:20px}
-  #mapPanel{order:-1}
+  /* mobile/tablet: read the plan first, map sits below the itinerary */
+  #mapPanel{order:2}
   #mapPanel .mapcard{margin:0}
   .map-layers{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
   .layer-toggle{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-soft);border-radius:20px;padding:5px 12px;font-size:12.5px;cursor:pointer;user-select:none}
@@ -435,7 +469,7 @@
   .hotel-pin.booked{border-color:var(--kyoto);box-shadow:0 0 0 3px color-mix(in srgb,var(--kyoto) 35%,transparent),0 1px 4px rgba(0,0,0,.35)}
 
   @media print{
-    .topbar,.theme-btn,.print-btn,.note-wrap,.journey,.maprow,.addrow,.callout .ico,#mapLink,#mapPanel,.backup-row,.day-edit,.import-row{display:none!important}
+    .topbar,.theme-btn,.print-btn,.note-wrap,.journey,.maprow,.addrow,.callout .ico,#mapLink,#mapPanel,.backup-row,.day-edit,.import-row,.city-spine{display:none!important}
     body{background:#fff;color:#000;font-size:11px}
     .day,.panel{box-shadow:none;border:1px solid #ccc;break-inside:avoid;page-break-inside:avoid}
     .hero{padding:10px 0}
@@ -451,6 +485,8 @@
     <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle light and dark theme">◐</button>
   </div>
 </header>
+
+<nav class="city-spine" id="citySpine" aria-label="Jump to a city"></nav>
 
 <div class="wrap">
   <section class="hero">
@@ -1232,6 +1268,37 @@
     setTimeout(function(){map.invalidateSize();},250);
   }
   initMap();
+
+  // ---- mobile city spine (fixed left rail, follows scroll) ----
+  function initCitySpine(){
+    var host=document.getElementById("citySpine");if(!host)return;
+    host.innerHTML="";var segEls={};
+    SEGS.forEach(function(s){
+      var c=CITIES[s.key];
+      var count=DAYS.filter(function(d){return d.seg===s.key;}).length||1;
+      var first=-1;for(var i=0;i<DAYS.length;i++){if(DAYS[i].seg===s.key){first=i;break;}}
+      var b=el("button","cs-seg");b.type="button";
+      b.style.setProperty("--c","var("+c.v+")");
+      b.style.flexGrow=String(count);
+      b.title="Jump to "+c.name;b.setAttribute("aria-label","Jump to "+c.name);
+      b.appendChild(el("span","cs-lab",c.name));
+      (function(fi){b.addEventListener("click",function(){var t=document.getElementById("day-"+fi);if(t)t.scrollIntoView({behavior:"smooth",block:"start"});});})(first);
+      host.appendChild(b);segEls[s.key]=b;
+    });
+    function setActive(seg){Object.keys(segEls).forEach(function(k){segEls[k].classList.toggle("active",k===seg);});}
+    setActive(SEGS[0].key);
+    if("IntersectionObserver" in window){
+      var seen={};
+      var io=new IntersectionObserver(function(es){
+        es.forEach(function(e){seen[e.target.id]=e.isIntersecting?e.intersectionRatio:0;});
+        var bestId=null,best=0;
+        Object.keys(seen).forEach(function(id){if(seen[id]>best){best=seen[id];bestId=id;}});
+        if(bestId){var i=parseInt(bestId.split("-")[1],10),d=DAYS[i];if(d)setActive(d.seg);}
+      },{root:null,threshold:[0.15,0.4,0.7],rootMargin:"-12% 0px -55% 0px"});
+      for(var j=0;j<DAYS.length;j++){var dn=document.getElementById("day-"+j);if(dn)io.observe(dn);}
+    }
+  }
+  initCitySpine();
 
   // ---- backup: export / import ----
   var PREFIX=["chk:","note:","prep:","mapUrl","pins","theme","stays","itin"];
