@@ -419,6 +419,7 @@
   .sync-fields input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
   .sync-connected{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:14px;font-size:13.5px;color:var(--ink-soft)}
   .sync-connected[hidden]{display:none}
+  .sync-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 
   .coverage{margin-bottom:22px}
   .cov-msg{margin:0 0 12px;font-size:14.5px;color:var(--ink-soft)}
@@ -620,8 +621,11 @@
           <button class="btn" id="syncConnect" type="button">Connect</button>
         </div>
         <div class="sync-connected" id="syncConnected" hidden>
-          <span>Syncing as <strong id="syncCodeShow"></strong> — enter the same URL &amp; code on your other devices. Changes now sync automatically within a few seconds.</span>
-          <button class="btn ghost" id="syncDisconnect" type="button">Disconnect</button>
+          <span>Syncing as <strong id="syncCodeShow"></strong>. Add another device in one tap — send it the <strong>invite link</strong> and opening it connects automatically. Changes then sync within a few seconds.</span>
+          <div class="sync-actions">
+            <button class="btn" id="syncInvite" type="button">Copy invite link</button>
+            <button class="btn ghost" id="syncDisconnect" type="button">Disconnect</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1551,6 +1555,30 @@
   });
   var sd=document.getElementById("syncDisconnect");
   if(sd)sd.addEventListener("click",function(){SYNC.stopPolling();LS.del("syncUrl");LS.del("syncCode");LS.del("syncV");LS.del("syncUpdated");renderSyncUI();});
+
+  // ---- one-tap sharing: encode the db URL + trip code into a link that auto-connects on open ----
+  function b64urlEnc(s){return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}
+  function b64urlDec(s){s=s.replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";return atob(s);}
+  function inviteLink(){
+    var payload=b64urlEnc(JSON.stringify({u:LS.get("syncUrl",""),c:LS.get("syncCode","")}));
+    return location.origin+location.pathname+"#sync="+payload;
+  }
+  var si=document.getElementById("syncInvite");
+  if(si)si.addEventListener("click",function(){
+    if(!SYNC.on())return;
+    var link=inviteLink(),orig=si.textContent;
+    var done=function(){si.textContent="Copied ✓";setTimeout(function(){si.textContent=orig;},1500);};
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(link).then(done,function(){window.prompt("Copy this invite link:",link);});
+    else window.prompt("Copy this invite link:",link);
+  });
+  // if we arrived via an invite link, adopt its credentials, then scrub them out of the address bar
+  (function importInvite(){
+    var m=(location.hash||"").match(/sync=([A-Za-z0-9\-_]+)/);
+    if(!m)return;
+    try{var d=JSON.parse(b64urlDec(m[1]));if(d&&d.u&&d.c){LS.set("syncUrl",d.u);LS.set("syncCode",d.c);LS.del("syncV");LS.del("syncUpdated");}}catch(e){}
+    try{history.replaceState(null,"",location.pathname+location.search);}catch(e){try{location.hash="";}catch(_){}}
+  })();
+
   renderSyncUI();
   if(SYNC.on()){
     SYNC.startPolling();
