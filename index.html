@@ -435,6 +435,12 @@
   .sc-open.muted{color:var(--ink-faint);pointer-events:none}
   .sc-del{flex:none;border:0;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:15px;line-height:1;padding:4px 6px}
   .sc-del:hover{color:var(--osaka)}
+  .sc-loc{flex:none;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;font-size:14px;line-height:1;padding:0}
+  .sc-loc:hover{border-color:var(--accent)}
+  .sc-loc.has{border-color:var(--osaka);background:color-mix(in srgb,var(--osaka) 12%,transparent)}
+  .leaflet-div-icon.hotel-div{background:transparent;border:0}
+  .hotel-pin{width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--surface);border:2px solid var(--osaka);border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+  .hotel-pin.booked{border-color:var(--kyoto);box-shadow:0 0 0 3px color-mix(in srgb,var(--kyoto) 35%,transparent),0 1px 4px rgba(0,0,0,.35)}
 
   @media print{
     .topbar,.theme-btn,.print-btn,.note-wrap,.journey,.maprow,.addrow,.callout .ico,#mapLink,#mapPanel,.backup-row,.day-edit,.import-row{display:none!important}
@@ -535,7 +541,7 @@
   <section class="block">
     <div class="panel">
       <h2>Your map &amp; wishlist</h2>
-      <p class="sub">Keep a shortcut to your Google&nbsp;My&nbsp;Maps link, import its pins from a KML export, or add spots by hand. Saved on this device (and synced if cloud sync is on).</p>
+      <p class="sub">Type a place below and it's found and pinned on the map automatically — no export needed. (A Google&nbsp;Maps <em>saved list</em> can't export, but a <em>My&nbsp;Maps</em> KML still imports here.) Then use “Add to day” to drop any place into your plan.</p>
       <div class="maprow">
         <input type="url" id="mapInput" placeholder="https://www.google.com/maps/d/… (your My Maps link)" />
         <button class="btn" id="saveMap" type="button">Save link</button>
@@ -754,6 +760,18 @@
   }
   function el(tag,cls,html){var e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e;}
   function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+  var GEOQ=[],GEOBUSY=false;
+  function geocode(q,cb){GEOQ.push([q,cb]);pumpGeo();}
+  function pumpGeo(){
+    if(GEOBUSY||!GEOQ.length)return;
+    GEOBUSY=true;var job=GEOQ.shift();
+    if(typeof fetch==="undefined"){job[1](null);GEOBUSY=false;return pumpGeo();}
+    fetch("https://photon.komoot.io/api/?limit=1&lang=en&q="+encodeURIComponent(job[0]))
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(j){var f=j&&j.features&&j.features[0];job[1]((f&&f.geometry&&f.geometry.coordinates)?{lat:f.geometry.coordinates[1],lng:f.geometry.coordinates[0]}:null);})
+      .catch(function(){job[1](null);})
+      .then(function(){setTimeout(function(){GEOBUSY=false;pumpGeo();},700);});
+  }
 
   // ---- journey bar + legend ----
   var bar=document.getElementById("bar");
@@ -1044,9 +1062,16 @@
   }
   function addOne(){
     var name=pinInput.value.trim();if(!name)return;
+    var city=pinCity.value,id=name+"|"+city+"|"+Date.now();
     var pins=getPins();
-    pins.push({id:name+"|"+pinCity.value+"|"+pins.length,name:name,city:pinCity.value});
+    pins.push({id:id,name:name,city:city});
     setPins(pins);pinInput.value="";renderPins();pinInput.focus();
+    setImportHint("Finding “"+name+"” on the map…");
+    geocode(name+" "+(CITIES[city]?CITIES[city].name:"")+" Japan",function(hit){
+      var all=getPins(),p=null;for(var i=0;i<all.length;i++){if(all[i].id===id){p=all[i];break;}}
+      if(p&&hit){p.lat=hit.lat;p.lng=hit.lng;setPins(all);renderPins();if(typeof addWishlistToMap==="function")addWishlistToMap();setImportHint("Added “"+name+"” — pinned on the map.");}
+      else setImportHint("Added “"+name+"”, but couldn't place it on the map — try a more specific name.");
+    });
   }
   addPin.addEventListener("click",addOne);
   pinInput.addEventListener("keydown",function(e){if(e.key==="Enter")addOne();});
@@ -1110,8 +1135,8 @@
 
   // ---- map (Leaflet + OpenStreetMap) ----
   var MC={tokyo:"#3a4a9f",osaka:"#c26b3c",kyoto:"#6f8047",hiroshima:"#46707a"};
-  var MAPOBJ=null,ITINLAYER=null,WISHLAYER=null,ITINMARKERS=[],SCRATCHMARKERS=[];
-  var LAYERON={itin:true,scratch:true},CURCITY=null;
+  var MAPOBJ=null,ITINLAYER=null,WISHLAYER=null,HOTELLAYER=null,ITINMARKERS=[],SCRATCHMARKERS=[],HOTELMARKERS=[];
+  var LAYERON={itin:true,scratch:true,hotels:true},CURCITY=null;
   function stripHTML(s){var t=document.createElement("div");t.innerHTML=s;return t.textContent||t.innerText||s;}
   function cityForCoords(lat,lng){
     var C={tokyo:[35.68,139.76],osaka:[34.69,135.50],kyoto:[35.01,135.77],hiroshima:[34.39,132.45]},best="tokyo",bd=Infinity;
@@ -1144,10 +1169,24 @@
       WISHLAYER.addLayer(m);SCRATCHMARKERS.push(m);
     });
   }
+  function refreshHotelMarkers(){
+    if(!MAPOBJ||!HOTELLAYER||typeof L==="undefined")return;
+    HOTELLAYER.clearLayers();HOTELMARKERS=[];
+    getStays().forEach(function(s){
+      if(s.lat==null||s.lng==null||isNaN(s.lat)||isNaN(s.lng))return;
+      var booked=s.status==="booked";
+      var icon=L.divIcon({className:"hotel-div",html:'<div class="hotel-pin'+(booked?" booked":"")+'">🏨</div>',iconSize:[28,28],iconAnchor:[14,14],popupAnchor:[0,-14]});
+      var m=L.marker([s.lat,s.lng],{icon:icon});m._city=s.city;
+      var st=(typeof STATUS_META!=="undefined"&&STATUS_META[s.status])?STATUS_META[s.status].t:s.status;
+      m.bindPopup('<b>'+String(s.name||"Hotel").replace(/</g,"&lt;")+'</b><br><span style="opacity:.7">'+st+' · '+(CITIES[s.city]?CITIES[s.city].name:"")+'</span>'+(s.url?'<br><a href="'+String(s.url).replace(/"/g,"&quot;")+'" target="_blank" rel="noopener">Open listing ↗</a>':''));
+      HOTELLAYER.addLayer(m);HOTELMARKERS.push(m);
+    });
+  }
   function applyLayers(){
     if(!MAPOBJ)return;
     if(LAYERON.itin){if(!MAPOBJ.hasLayer(ITINLAYER))ITINLAYER.addTo(MAPOBJ);}else if(MAPOBJ.hasLayer(ITINLAYER))MAPOBJ.removeLayer(ITINLAYER);
     if(LAYERON.scratch){if(!MAPOBJ.hasLayer(WISHLAYER))WISHLAYER.addTo(MAPOBJ);}else if(MAPOBJ.hasLayer(WISHLAYER))MAPOBJ.removeLayer(WISHLAYER);
+    if(LAYERON.hotels){if(HOTELLAYER&&!MAPOBJ.hasLayer(HOTELLAYER))HOTELLAYER.addTo(MAPOBJ);}else if(HOTELLAYER&&MAPOBJ.hasLayer(HOTELLAYER))MAPOBJ.removeLayer(HOTELLAYER);
   }
   function focusCity(city){
     if(!MAPOBJ||typeof L==="undefined")return;
@@ -1155,6 +1194,7 @@
     var pts=[];
     if(LAYERON.itin)ITINMARKERS.forEach(function(m){if(m._city===city)pts.push(m.getLatLng());});
     if(LAYERON.scratch)SCRATCHMARKERS.forEach(function(m){if(m._city===city)pts.push(m.getLatLng());});
+    if(LAYERON.hotels)HOTELMARKERS.forEach(function(m){if(m._city===city)pts.push(m.getLatLng());});
     if(!pts.length)ITINMARKERS.forEach(function(m){if(m._city===city)pts.push(m.getLatLng());});
     if(pts.length)MAPOBJ.flyToBounds(L.latLngBounds(pts).pad(0.25),{duration:.6,maxZoom:14});
     var lbl=document.getElementById("mapCityLabel");if(lbl)lbl.textContent=CITIES[city]?CITIES[city].name:"";
@@ -1172,6 +1212,7 @@
     }
     tog("itin","Itinerary stops",true,"var(--accent)");
     tog("scratch","Scratchpad places",false,"var(--ink-soft)");
+    tog("hotels","Hotels",true,"var(--osaka)");
     var lbl=el("span","map-city-label");lbl.id="mapCityLabel";host.appendChild(lbl);
   }
   function setupScrollFollow(){
@@ -1191,7 +1232,7 @@
     if(typeof L==="undefined"){panel.classList.add("mapoff");return;}
     var map=L.map("map",{scrollWheelZoom:false}).setView([36.5,137.8],5);
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"}).addTo(map);
-    MAPOBJ=map;ITINLAYER=L.layerGroup().addTo(map);WISHLAYER=L.layerGroup().addTo(map);
+    MAPOBJ=map;ITINLAYER=L.layerGroup().addTo(map);WISHLAYER=L.layerGroup().addTo(map);HOTELLAYER=L.layerGroup().addTo(map);
     refreshItinMarkers();addWishlistToMap();applyLayers();
     var all=ITINMARKERS.map(function(m){return m.getLatLng();});
     if(all.length)map.fitBounds(L.latLngBounds(all).pad(0.2));
@@ -1259,8 +1300,15 @@
     }).catch(function(){cb(null);});
   }
   var STAYS=getStays();
-  function persist(rerender){setStays(STAYS);renderCoverage();if(rerender)renderStays();}
+  function persist(rerender){setStays(STAYS);renderCoverage();if(rerender){renderStays();if(typeof refreshHotelMarkers==="function")refreshHotelMarkers();}}
   function cityBooked(k){return STAYS.some(function(s){return s.city===k&&s.status==="booked";});}
+  function locateStay(s,cb){
+    geocode((s.name||"")+" "+(CITIES[s.city]?CITIES[s.city].name:"")+" Japan",function(hit){
+      if(hit){s.lat=hit.lat;s.lng=hit.lng;setStays(STAYS);}
+      if(typeof refreshHotelMarkers==="function")refreshHotelMarkers();
+      if(cb)cb(hit);
+    });
+  }
   function renderCoverage(){
     var host=document.getElementById("coverage");if(!host)return;
     var booked={};["tokyo","osaka","kyoto"].forEach(function(k){booked[k]=cityBooked(k);});
@@ -1292,9 +1340,11 @@
     var open=el("a","sc-open");
     if(s.url){open.href=s.url;open.target="_blank";open.rel="noopener";open.textContent="↗";open.title="Open link";}
     else{open.classList.add("muted");open.textContent="–";open.title="No link";}
+    var loc=el("button","sc-loc");loc.type="button";loc.textContent="📍";loc.title=(s.lat!=null?"On the map — click to re-find":"Find on map");if(s.lat!=null)loc.classList.add("has");
+    loc.addEventListener("click",function(){loc.textContent="…";loc.disabled=true;locateStay(s,function(hit){loc.disabled=false;loc.textContent="📍";loc.classList.toggle("has",!!hit);loc.title=hit?"Located ✓ — click to re-find":"Not found — refine the name, then retry";});});
     var del=el("button","sc-del");del.type="button";del.textContent="✕";del.title="Remove";del.setAttribute("aria-label","Remove hotel");
     del.addEventListener("click",function(){STAYS=STAYS.filter(function(x){return x.id!==s.id;});persist(true);});
-    row.appendChild(pill);row.appendChild(name);row.appendChild(price);row.appendChild(notes);row.appendChild(city);row.appendChild(open);row.appendChild(del);
+    row.appendChild(pill);row.appendChild(name);row.appendChild(price);row.appendChild(notes);row.appendChild(city);row.appendChild(loc);row.appendChild(open);row.appendChild(del);
     return row;
   }
   function renderStays(){
@@ -1322,14 +1372,15 @@
     var id="s"+Date.now()+"-"+Math.floor(Math.random()*1000);
     STAYS.push({id:id,name:deriveName(url),url:url,city:cy,status:"idea",price:"",notes:""});
     persist(true);uEl.value="";uEl.focus();
+    locateStay(STAYS[STAYS.length-1]);
     fetchTitle(url,function(t){
       if(!t)return;
       var s=null;for(var i=0;i<STAYS.length;i++){if(STAYS[i].id===id){s=STAYS[i];break;}}
-      if(s&&(!s.name||s.name===deriveName(url))){s.name=t;persist(true);}
+      if(s&&(!s.name||s.name===deriveName(url))){s.name=t;persist(true);locateStay(s);}
     });
   });
   var suEl=document.getElementById("stayUrl");if(suEl&&sa)suEl.addEventListener("keydown",function(ev){if(ev.key==="Enter")sa.click();});
-  renderStays();renderCoverage();
+  renderStays();renderCoverage();if(typeof refreshHotelMarkers==="function")refreshHotelMarkers();
 
   // ---- optional cloud sync (Firebase Realtime DB, plain REST — no SDK) ----
   var statusEl=document.getElementById("syncStatus");
