@@ -1294,17 +1294,29 @@
       host.appendChild(b);segEls[s.key]=b;
     });
     function setActive(seg){Object.keys(segEls).forEach(function(k){segEls[k].classList.toggle("active",k===seg);});}
-    setActive(SEGS[0].key);
-    if("IntersectionObserver" in window){
-      var seen={};
-      var io=new IntersectionObserver(function(es){
-        es.forEach(function(e){seen[e.target.id]=e.isIntersecting?e.intersectionRatio:0;});
-        var bestId=null,best=0;
-        Object.keys(seen).forEach(function(id){if(seen[id]>best){best=seen[id];bestId=id;}});
-        if(bestId){var i=parseInt(bestId.split("-")[1],10),d=DAYS[i];if(d)setActive(d.seg);}
-      },{root:null,threshold:[0.15,0.4,0.7],rootMargin:"-12% 0px -55% 0px"});
-      for(var j=0;j<DAYS.length;j++){var dn=document.getElementById("day-"+j);if(dn)io.observe(dn);}
+    // scroll-driven so it can also CLEAR once you've scrolled past the last day
+    // (an IntersectionObserver stops firing once every card has left the viewport)
+    var mq=window.matchMedia?window.matchMedia("(max-width:640px)"):null;
+    function updateSpine(){
+      if(mq&&!mq.matches)return;                     // the spine only exists on phones
+      var vh=window.innerHeight||document.documentElement.clientHeight,anchor=vh*0.28;
+      var allAbove=true,allBelow=true,chosen=null,chosenTop=-Infinity;
+      for(var i=0;i<DAYS.length;i++){
+        var e=document.getElementById("day-"+i);if(!e)continue;
+        var r=e.getBoundingClientRect();
+        if(r.bottom>0)allAbove=false;                // a card still reaches at/below the top edge
+        if(r.top<vh)allBelow=false;                  // a card still reaches at/above the bottom edge
+        if(r.top<=anchor&&r.bottom>0&&r.top>chosenTop){chosenTop=r.top;chosen=DAYS[i].seg;}
+      }
+      if(allAbove){setActive(null);return;}          // scrolled past every day → no highlight
+      if(allBelow){setActive(SEGS[0].key);return;}   // above the first day → trip-start city
+      setActive(chosen||SEGS[0].key);                // reading the list → nearest day at/above the anchor
     }
+    var raf=false;
+    function onScroll(){if(raf)return;raf=true;(window.requestAnimationFrame||function(f){setTimeout(f,16);})(function(){updateSpine();raf=false;});}
+    window.addEventListener("scroll",onScroll,{passive:true});
+    window.addEventListener("resize",onScroll);
+    updateSpine();
   }
   initCitySpine();
 
@@ -1482,16 +1494,20 @@
       }).catch(function(){setStatus("offline — will retry on next change","warn");});
     },
     queue:function(){var s=this;clearTimeout(s.timer);s.timer=setTimeout(function(){s.timer=null;s.push();},1200);},
+    normalize:function(obj){var o={},ks=Object.keys(obj||{}).filter(isOurs).sort();ks.forEach(function(k){o[k]=obj[k];});return JSON.stringify(o);},
     pull:function(cb){
       var u=this.endpoint();if(!u){cb&&cb(false);return;}
       var s=this;setStatus("connecting…");
       fetch(u).then(function(r){return r.ok?r.json():null;}).then(function(j){
         if(j&&j.data){
           var localV=s.localV(),remoteV=(j.v)||0;
-          if(remoteV>localV){
+          // take remote when it's a newer version, OR the same version but genuinely different
+          // content — the tie-break reconciles two devices that wrote the same version at once
+          // (and pulls a legacy pre-versioning blob, which reads as v0 on both sides).
+          if(remoteV>localV || (remoteV===localV && s.normalize(j.data)!==s.normalize(s.collect()))){
             s.applying=true;
             Object.keys(j.data).forEach(function(k){if(isOurs(k)){try{localStorage.setItem(k,j.data[k]);}catch(e){}}});
-            try{localStorage.setItem("syncV",String(remoteV));}catch(e){}
+            try{localStorage.setItem("syncV",String(Math.max(remoteV,localV)));}catch(e){}
             s.applying=false;setStatus("synced ✓","ok");cb&&cb(true,"remote");
           }else if(localV>remoteV){s.push();cb&&cb(true,"local");}
           else{setStatus("synced ✓","ok");cb&&cb(true,"same");}
