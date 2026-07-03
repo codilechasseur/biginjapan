@@ -334,6 +334,52 @@
   .sync-connected{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:14px;font-size:13.5px;color:var(--ink-soft)}
   .sync-connected[hidden]{display:none}
 
+  .coverage{margin-bottom:22px}
+  .cov-msg{margin:0 0 12px;font-size:14.5px;color:var(--ink-soft)}
+  .cov-msg strong{color:var(--ink)}
+  .cov-strip{display:flex;gap:6px;flex-wrap:wrap}
+  .cov-night{--c:var(--tokyo);flex:1;min-width:42px;border-radius:9px;border:1px solid var(--line);padding:8px 4px 5px;text-align:center;background:var(--surface-2);position:relative}
+  .cov-night::before{content:"";position:absolute;left:8px;right:8px;top:5px;height:3px;border-radius:2px;background:var(--c);opacity:.9}
+  .cov-night .cn-dow{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);margin-top:6px}
+  .cov-night .cn-num{display:block;font-family:var(--serif);font-size:1.15rem;font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums}
+  .cov-night.cov{background:color-mix(in srgb,var(--c) 16%,var(--surface));border-color:color-mix(in srgb,var(--c) 42%,transparent)}
+  .cov-night.cov::after{content:"✓";position:absolute;bottom:1px;right:5px;font-size:10px;color:var(--c);font-weight:700}
+  .cov-night.open{border-style:dashed}
+
+  .stay-add{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px}
+  .stay-add input{background:var(--surface-2);border:1px solid var(--line);border-radius:9px;color:var(--ink);font-family:var(--sans);font-size:14px;padding:10px 12px}
+  .stay-add input[type=url]{flex:2;min-width:200px}
+  .stay-add input[type=text]{flex:1;min-width:140px}
+  .stay-add input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+  .stay-add select{background:var(--surface-2);border:1px solid var(--line);border-radius:9px;color:var(--ink);font-family:var(--sans);font-size:14px;padding:0 12px;height:42px;cursor:pointer}
+  .stay-add select:focus{outline:2px solid var(--accent);outline-offset:1px}
+
+  .stay-list{display:flex;flex-direction:column;gap:24px}
+  .stay-city h4{font-size:12px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--c);margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  .stay-city h4 .dot{width:9px;height:9px;border-radius:50%;background:var(--c)}
+  .sc-need{margin-left:auto;color:var(--ink-faint);letter-spacing:.04em}
+  .stay-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(288px,1fr));gap:12px}
+  .stay-card{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .sc-top{display:flex;gap:10px;align-items:center}
+  .sc-name{flex:1;min-width:0;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--ink);font-family:var(--sans);font-size:15px;font-weight:600;padding:4px 2px}
+  .sc-name:focus{outline:none;border-bottom-color:var(--accent)}
+  .pill{border:1px solid transparent;border-radius:20px;padding:3px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--mono);letter-spacing:.04em;white-space:nowrap}
+  .st-idea{background:var(--surface);color:var(--ink-soft);border-color:var(--line-strong)}
+  .st-short{background:var(--accent-soft);color:var(--accent);border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
+  .st-booked{background:color-mix(in srgb,var(--kyoto) 18%,transparent);color:var(--kyoto);border-color:color-mix(in srgb,var(--kyoto) 42%,transparent)}
+  .sc-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .sc-meta select,.sc-meta input{background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:var(--sans);font-size:12.5px;padding:6px 8px}
+  .sc-date{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}
+  .sc-date input{font-family:var(--sans)}
+  .sc-price{width:96px}
+  .sc-meta select:focus,.sc-meta input:focus,.sc-notes:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+  .sc-notes{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:var(--sans);font-size:13px;padding:8px 10px}
+  .sc-foot{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .sc-open{font-size:12.5px;font-weight:600}
+  .sc-open.muted{color:var(--ink-faint);font-weight:400}
+  .sc-del{border:0;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:12.5px}
+  .sc-del:hover{color:var(--osaka)}
+
   @media print{
     .topbar,.theme-btn,.print-btn,.note-wrap,.journey,.maprow,.addrow,.callout .ico,#mapLink,#mapPanel,.backup-row{display:none!important}
     body{background:#fff;color:#000;font-size:11px}
@@ -389,6 +435,26 @@
   </section>
 
   <main id="itinerary"></main>
+
+  <section class="block" id="stays">
+    <div class="panel">
+      <div class="panel-head">
+        <div><h2>Where we're staying</h2><p class="sub">Paste every hotel link here, compare them by city, then mark the winner <em>Booked</em> and set its dates. The night tracker below fills in as you lock rooms down.</p></div>
+      </div>
+      <div class="coverage" id="coverage"></div>
+      <div class="stay-add">
+        <input type="url" id="stayUrl" placeholder="Paste a hotel link…" />
+        <input type="text" id="stayName" placeholder="Name (optional)" />
+        <select id="stayCity" aria-label="City for this hotel">
+          <option value="tokyo">Tokyo</option>
+          <option value="osaka">Osaka</option>
+          <option value="kyoto">Kyoto</option>
+        </select>
+        <button class="btn" id="stayAdd" type="button">Add</button>
+      </div>
+      <div class="stay-list" id="stayList"></div>
+    </div>
+  </section>
 
   <section class="block">
     <div class="panel">
@@ -887,7 +953,7 @@
   initMap();
 
   // ---- backup: export / import ----
-  var PREFIX=["chk:","note:","prep:","mapUrl","pins","theme"];
+  var PREFIX=["chk:","note:","prep:","mapUrl","pins","theme","stays"];
   function isOurs(k){return PREFIX.some(function(p){return k===p||k.indexOf(p)===0;});}
   function exportData(){
     var data={};
@@ -911,6 +977,98 @@
   }
   var eb=document.getElementById("exportBtn");if(eb)eb.addEventListener("click",exportData);
   var imp=document.getElementById("importFile");if(imp)imp.addEventListener("change",function(){if(imp.files[0])importData(imp.files[0]);});
+
+  // ---- accommodation / stays ----
+  var NIGHTS=[
+    {date:"2026-09-04",city:"tokyo"},{date:"2026-09-05",city:"tokyo"},{date:"2026-09-06",city:"tokyo"},
+    {date:"2026-09-07",city:"tokyo"},{date:"2026-09-08",city:"tokyo"},
+    {date:"2026-09-09",city:"osaka"},{date:"2026-09-10",city:"osaka"},{date:"2026-09-11",city:"osaka"},
+    {date:"2026-09-12",city:"kyoto"},{date:"2026-09-13",city:"kyoto"},{date:"2026-09-14",city:"kyoto"}
+  ];
+  var STATUS_ORDER=["idea","shortlist","booked"];
+  var STATUS_META={idea:{t:"Idea",c:"st-idea"},shortlist:{t:"Shortlist",c:"st-short"},booked:{t:"Booked",c:"st-booked"}};
+  function getStays(){try{var a=JSON.parse(LS.get("stays","[]"));return Array.isArray(a)?a:[];}catch(e){return[];}}
+  function setStays(a){LS.set("stays",JSON.stringify(a));}
+  function hostname(u){try{return new URL(u).hostname.replace(/^www\./,"");}catch(e){return "";}}
+  function coveredBy(stays,date){
+    return stays.some(function(s){return s.status==="booked"&&s.checkIn&&s.checkOut&&s.checkIn<=date&&date<s.checkOut;});
+  }
+  var STAYS=getStays();
+  function persist(rerender){setStays(STAYS);renderCoverage();if(rerender)renderStays();}
+  function renderCoverage(){
+    var host=document.getElementById("coverage");if(!host)return;
+    var cov=NIGHTS.map(function(n){return coveredBy(STAYS,n.date);});
+    var done=cov.filter(Boolean).length,total=NIGHTS.length,openByCity={};
+    NIGHTS.forEach(function(n,i){if(!cov[i])openByCity[n.city]=(openByCity[n.city]||0)+1;});
+    var msg;
+    if(done===total)msg='<strong>All '+total+' nights are booked.</strong> 🎉 Sep 4–14 fully covered.';
+    else{
+      var parts=["tokyo","osaka","kyoto"].filter(function(k){return openByCity[k];}).map(function(k){return openByCity[k]+' × '+CITIES[k].name;});
+      msg='<strong>'+done+' of '+total+' nights booked.</strong> Still to cover: '+parts.join(", ")+'.';
+    }
+    var strip='<div class="cov-strip">';
+    NIGHTS.forEach(function(n,i){
+      var f=fmt(n.date);
+      strip+='<div class="cov-night '+(cov[i]?"cov":"open")+'" style="--c:var('+CITIES[n.city].v+')" title="'+f.dow+' '+f.mon+' '+f.num+' · '+CITIES[n.city].name+(cov[i]?" · booked":" · open")+'">'+
+        '<span class="cn-dow">'+f.dow+'</span><span class="cn-num">'+f.num+'</span></div>';
+    });
+    host.innerHTML='<p class="cov-msg">'+msg+'</p>'+strip+'</div>';
+  }
+  function buildStayCard(s){
+    var card=el("div","stay-card");card.setAttribute("data-id",s.id);
+    var sm=STATUS_META[s.status]||STATUS_META.idea;
+    var top=el("div","sc-top");
+    var name=el("input","sc-name");name.type="text";name.value=s.name||"";name.placeholder=hostname(s.url)||"Hotel name";
+    name.addEventListener("input",function(){s.name=name.value;persist(false);});
+    var pill=el("button","pill sc-status "+sm.c);pill.type="button";pill.textContent=sm.t;
+    pill.title="Click to change status";
+    pill.addEventListener("click",function(){var i=STATUS_ORDER.indexOf(s.status);s.status=STATUS_ORDER[(i+1)%STATUS_ORDER.length];persist(true);});
+    top.appendChild(name);top.appendChild(pill);
+    var meta=el("div","sc-meta");
+    var city=el("select","sc-city");
+    ["tokyo","osaka","kyoto"].forEach(function(k){var o=el("option");o.value=k;o.textContent=CITIES[k].name;if(s.city===k)o.selected=true;city.appendChild(o);});
+    city.addEventListener("change",function(){s.city=city.value;persist(true);});
+    var din=el("label","sc-date","In");var ci=el("input");ci.type="date";ci.min="2026-09-04";ci.max="2026-09-15";ci.value=s.checkIn||"";ci.addEventListener("change",function(){s.checkIn=ci.value;persist(false);});din.appendChild(ci);
+    var dout=el("label","sc-date","Out");var co=el("input");co.type="date";co.min="2026-09-04";co.max="2026-09-15";co.value=s.checkOut||"";co.addEventListener("change",function(){s.checkOut=co.value;persist(false);});dout.appendChild(co);
+    var price=el("input","sc-price");price.type="text";price.value=s.price||"";price.placeholder="¥ / night";price.addEventListener("input",function(){s.price=price.value;persist(false);});
+    meta.appendChild(city);meta.appendChild(din);meta.appendChild(dout);meta.appendChild(price);
+    var notes=el("input","sc-notes");notes.type="text";notes.value=s.notes||"";notes.placeholder="Notes — area, price, who suggested it…";notes.addEventListener("input",function(){s.notes=notes.value;persist(false);});
+    var foot=el("div","sc-foot");
+    if(s.url){var a=el("a","sc-open");a.href=s.url;a.target="_blank";a.rel="noopener";a.textContent="Open link ↗";foot.appendChild(a);}
+    else foot.appendChild(el("span","sc-open muted","No link"));
+    var del=el("button","sc-del");del.type="button";del.textContent="Remove";
+    del.addEventListener("click",function(){STAYS=STAYS.filter(function(x){return x.id!==s.id;});persist(true);});
+    foot.appendChild(del);
+    card.appendChild(top);card.appendChild(meta);card.appendChild(notes);card.appendChild(foot);
+    return card;
+  }
+  function renderStays(){
+    var host=document.getElementById("stayList");if(!host)return;
+    host.innerHTML="";
+    if(!STAYS.length){host.appendChild(el("div","empty","No hotels yet — paste your first link above."));return;}
+    ["tokyo","osaka","kyoto"].forEach(function(k){
+      var group=STAYS.filter(function(s){return s.city===k;});
+      if(!group.length)return;
+      var c=CITIES[k];
+      var wrap=el("div","stay-city");wrap.style.setProperty("--c","var("+c.v+")");
+      var need=NIGHTS.filter(function(n){return n.city===k;}).length;
+      wrap.appendChild(el("h4",null,'<span class="dot"></span>'+c.name+' · '+c.jp+' <span class="sc-need">'+need+' nights needed</span>'));
+      var list=el("div","stay-cards");
+      group.forEach(function(s){list.appendChild(buildStayCard(s));});
+      wrap.appendChild(list);host.appendChild(wrap);
+    });
+  }
+  var sa=document.getElementById("stayAdd");
+  if(sa)sa.addEventListener("click",function(){
+    var uEl=document.getElementById("stayUrl"),nEl=document.getElementById("stayName");
+    var url=(uEl.value||"").trim(),nm=(nEl.value||"").trim(),cy=document.getElementById("stayCity").value;
+    if(!url&&!nm){uEl.focus();return;}
+    if(url&&!/^https?:\/\//i.test(url))url="https://"+url;
+    STAYS.push({id:"s"+Date.now()+"-"+Math.floor(Math.random()*1000),name:nm,url:url,city:cy,status:"idea",checkIn:"",checkOut:"",price:"",notes:""});
+    persist(true);uEl.value="";nEl.value="";uEl.focus();
+  });
+  ["stayUrl","stayName"].forEach(function(id){var e=document.getElementById(id);if(e&&sa)e.addEventListener("keydown",function(ev){if(ev.key==="Enter")sa.click();});});
+  renderStays();renderCoverage();
 
   // ---- optional cloud sync (Firebase Realtime DB, plain REST — no SDK) ----
   var statusEl=document.getElementById("syncStatus");
