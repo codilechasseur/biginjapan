@@ -233,6 +233,30 @@
   }
   .note-wrap textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
 
+  .day-edit{margin-left:auto;align-self:center;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-soft);font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:5px 12px;border-radius:7px;cursor:pointer}
+  .day-edit:hover{color:var(--accent);border-color:var(--accent)}
+  .day.editing{outline:2px solid color-mix(in srgb,var(--accent) 35%,transparent);outline-offset:3px}
+  .items-box{min-width:0}
+  .items-edit{display:flex;flex-direction:column;gap:8px}
+  .item-edit{display:grid;grid-template-columns:auto 58px 1fr auto;gap:8px;align-items:start;padding:8px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px}
+  .ie-move{display:flex;flex-direction:column;gap:3px}
+  .ie-arrow{width:24px;height:19px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);border-radius:5px;cursor:pointer;font-size:11px;line-height:1;padding:0}
+  .ie-arrow:disabled{opacity:.3;cursor:default}
+  .ie-arrow:hover:not(:disabled){color:var(--accent);border-color:var(--accent)}
+  .item-edit input,.ie-badge{background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:var(--sans);font-size:13.5px;padding:8px 9px;width:100%}
+  .ie-time{font-family:var(--mono);text-align:center}
+  .ie-fields{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .ie-badge{cursor:pointer;font-size:12px;align-self:flex-start;width:auto}
+  .item-edit input:focus,.ie-badge:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+  .ie-del{border:0;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:15px;padding:2px 4px;align-self:start;line-height:1}
+  .ie-del:hover{color:var(--osaka)}
+  .ie-tools{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:4px}
+  .add-item{border:1px dashed var(--line-strong);background:transparent;color:var(--accent);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans)}
+  .add-item:hover{background:var(--accent-soft)}
+  .reset-day{border:0;background:transparent;color:var(--ink-faint);font-size:12.5px;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+  .reset-day:hover{color:var(--ink-soft)}
+  .item-empty{color:var(--ink-faint);font-size:13.5px;font-style:italic;padding:6px 0;list-style:none;border-top:0}
+
   /* ---- prep / checklist ---- */
   .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow)}
   .panel h2{font-family:var(--serif);font-size:1.5rem;font-weight:600;margin-bottom:4px}
@@ -391,7 +415,7 @@
   .sc-del:hover{color:var(--osaka)}
 
   @media print{
-    .topbar,.theme-btn,.print-btn,.note-wrap,.journey,.maprow,.addrow,.callout .ico,#mapLink,#mapPanel,.backup-row{display:none!important}
+    .topbar,.theme-btn,.print-btn,.note-wrap,.journey,.maprow,.addrow,.callout .ico,#mapLink,#mapPanel,.backup-row,.day-edit,.import-row{display:none!important}
     body{background:#fff;color:#000;font-size:11px}
     .day,.panel{box-shadow:none;border:1px solid #ccc;break-inside:avoid;page-break-inside:avoid}
     .hero{padding:10px 0}
@@ -702,6 +726,7 @@
     return{dow:dow,num:d.getDate(),mon:mon};
   }
   function el(tag,cls,html){var e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e;}
+  function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 
   // ---- journey bar + legend ----
   var bar=document.getElementById("bar");
@@ -728,82 +753,136 @@
     legend.appendChild(it);
   });
 
-  // ---- itinerary ----
+  // ---- itinerary (editable, seeded from suggestions) ----
+  var GEO={
+    "0:0":[35.7720,140.3929],
+    "1:0":[35.7148,139.7967],"1:1":[35.7101,139.8107],"1:3":[35.7156,139.7745],"1:4":[35.7056,139.7519],
+    "2:0":[35.6764,139.6993],"2:1":[35.6716,139.7031],"2:2":[35.6595,139.7005],"2:3":[35.6493,139.7906],
+    "3:1":[35.6267,139.8850],
+    "4:1":[35.6852,139.7528],
+    "5:3":[34.6873,135.5259],"5:4":[34.6687,135.5013],
+    "6:0":[34.6654,135.4323],
+    "7:0":[34.6654,135.4323],"7:1":[34.6723,135.5006],
+    "8:1":[34.9671,135.7727],"8:2":[34.9949,135.7850],"8:3":[35.0036,135.7785],"8:4":[35.0044,135.7708],
+    "9:1":[34.3955,132.4536],"9:3":[34.2959,132.3199],
+    "10:0":[35.0170,135.6717],"10:2":[35.0394,135.7292],"10:3":[35.0050,135.7649],
+    "11:3":[35.7720,140.3929]
+  };
+  function seedItin(){
+    return DAYS.map(function(d,i){
+      return d.items.map(function(it,j){
+        return {id:"d"+i+"i"+j,time:it.time,txt:it.txt,note:it.note||"",badge:it.badge||"",geo:(GEO[i+":"+j]||null),done:LS.get("chk:"+i+":"+j)==="1"};
+      });
+    });
+  }
+  function loadItin(){
+    var raw=LS.get("itin","");
+    if(raw){try{var a=JSON.parse(raw);if(Array.isArray(a)&&a.length===DAYS.length)return a;}catch(e){}}
+    return seedItin();
+  }
+  var ITIN=loadItin();
+  function saveItin(){LS.set("itin",JSON.stringify(ITIN));}
+  if(!LS.get("itin",""))saveItin();
+  var EDITING={};
+  var BADGES=[{v:"",t:"— no tag"},{v:"travel",t:"Train"},{v:"book",t:"Book ahead"},{v:"kid",t:"Kid pick"}];
+  function badgeLabel(b){return b==="travel"?"train":b==="book"?"book ahead":b==="kid"?"kid pick":"";}
   var root=document.getElementById("itinerary");
-  var lastSeg=null;
-  DAYS.forEach(function(d,i){
-    if(d.seg!==lastSeg){
-      lastSeg=d.seg;
-      var seg=SEGS.filter(function(s){return s.key===d.seg;})[0];
-      var c=CITIES[d.seg];
-      var h=el("div","seg-head");
-      h.style.setProperty("--c","var("+c.v+")");
-      h.innerHTML='<div class="name">'+c.name+' <span class="jp">'+c.jp+'</span></div>'+
-                  '<div class="rule"></div><div class="meta">'+seg.meta+'</div>';
-      root.appendChild(h);
+
+  function buildItemView(items,j,li){
+    var it=items[j];
+    var btn=el("button","tick");btn.type="button";
+    btn.setAttribute("aria-pressed",it.done?"true":"false");
+    btn.setAttribute("aria-label","Mark done: "+String(it.txt||"").replace(/"/g,""));
+    btn.addEventListener("click",function(){it.done=!it.done;li.classList.toggle("done",it.done);btn.setAttribute("aria-pressed",it.done?"true":"false");saveItin();});
+    var badge=it.badge?' <span class="badge '+it.badge+'">'+badgeLabel(it.badge)+'</span>':'';
+    var what=el("div","what",'<span class="txt">'+esc(it.txt)+'</span>'+badge+(it.note?'<span class="note">'+esc(it.note)+'</span>':''));
+    li.appendChild(btn);li.appendChild(el("div","time",esc(it.time)));li.appendChild(what);
+  }
+  function buildItemEdit(items,j,redraw){
+    var it=items[j];
+    var row=el("div","item-edit");
+    var mv=el("div","ie-move");
+    var up=el("button","ie-arrow");up.type="button";up.textContent="↑";up.setAttribute("aria-label","Move earlier");up.disabled=(j===0);
+    up.addEventListener("click",function(){items.splice(j-1,0,items.splice(j,1)[0]);saveItin();redraw();});
+    var dn=el("button","ie-arrow");dn.type="button";dn.textContent="↓";dn.setAttribute("aria-label","Move later");dn.disabled=(j===items.length-1);
+    dn.addEventListener("click",function(){items.splice(j+1,0,items.splice(j,1)[0]);saveItin();redraw();});
+    mv.appendChild(up);mv.appendChild(dn);
+    var tin=el("input","ie-time");tin.type="text";tin.value=it.time||"";tin.placeholder="09:00";tin.addEventListener("input",function(){it.time=tin.value;saveItin();});
+    var fields=el("div","ie-fields");
+    var txt=el("input","ie-txt");txt.type="text";txt.value=it.txt||"";txt.placeholder="What are we doing?";txt.addEventListener("input",function(){it.txt=txt.value;saveItin();});
+    var note=el("input","ie-note");note.type="text";note.value=it.note||"";note.placeholder="Note (optional)";note.addEventListener("input",function(){it.note=note.value;saveItin();});
+    var bsel=el("select","ie-badge");
+    BADGES.forEach(function(b){var o=el("option");o.value=b.v;o.textContent=b.t;if((it.badge||"")===b.v)o.selected=true;bsel.appendChild(o);});
+    bsel.addEventListener("change",function(){it.badge=bsel.value;saveItin();});
+    fields.appendChild(txt);fields.appendChild(note);fields.appendChild(bsel);
+    var del=el("button","ie-del");del.type="button";del.textContent="✕";del.setAttribute("aria-label","Delete activity");
+    del.addEventListener("click",function(){items.splice(j,1);saveItin();redraw();});
+    row.appendChild(mv);row.appendChild(tin);row.appendChild(fields);row.appendChild(del);
+    return row;
+  }
+  function renderDayItems(i,box){
+    box.innerHTML="";
+    var items=ITIN[i],redraw=function(){renderDayItems(i,box);};
+    if(EDITING[i]){
+      var wrap=el("div","items-edit");
+      items.forEach(function(it,j){wrap.appendChild(buildItemEdit(items,j,redraw));});
+      var add=el("button","add-item");add.type="button";add.textContent="+ Add activity";
+      add.addEventListener("click",function(){items.push({id:"n"+Date.now()+"-"+Math.floor(Math.random()*1000),time:"",txt:"",note:"",badge:"",geo:null,done:false});saveItin();redraw();});
+      var reset=el("button","reset-day");reset.type="button";reset.textContent="Reset to suggestions";
+      reset.addEventListener("click",function(){if(confirm("Replace this day's activities with the original suggestions?")){ITIN[i]=seedItin()[i];saveItin();redraw();}});
+      var tools=el("div","ie-tools");tools.appendChild(add);tools.appendChild(reset);
+      wrap.appendChild(tools);box.appendChild(wrap);
+    }else{
+      var ul=el("ul","items");
+      if(!items.length)ul.appendChild(el("li","item-empty","Nothing here yet — tap Edit to add your plans."));
+      items.forEach(function(it,j){var li=el("li","item");if(it.done)li.classList.add("done");buildItemView(items,j,li);ul.appendChild(li);});
+      box.appendChild(ul);
     }
-    var c=CITIES[d.city];
-    var f=fmt(d.date);
-    var card=el("div","day reveal");
-    card.id="day-"+i;
-    card.style.setProperty("--c","var("+c.v+")");
-
+  }
+  function buildDayCard(i){
+    var d=DAYS[i],c=CITIES[d.city],f=fmt(d.date);
+    var card=el("div","day reveal");card.id="day-"+i;card.style.setProperty("--c","var("+c.v+")");
     var rail=el("div","rail");
-    rail.innerHTML='<span class="dow">'+f.dow+'</span><span class="dnum">'+f.num+'</span>'+
-                   '<span class="mon">'+f.mon+'</span><span class="cityname">'+c.name+'</span>';
+    rail.innerHTML='<span class="dow">'+f.dow+'</span><span class="dnum">'+f.num+'</span><span class="mon">'+f.mon+'</span><span class="cityname">'+c.name+'</span>';
     card.appendChild(rail);
-
     var body=el("div","body");
     var title=el("div","dtitle");
     title.innerHTML='<h3>'+d.title+'</h3>'+(d.route?'<span class="route">'+d.route+'</span>':'');
+    var editBtn=el("button","day-edit");editBtn.type="button";editBtn.textContent="Edit";
+    var box=el("div","items-box");
+    editBtn.addEventListener("click",function(){
+      EDITING[i]=!EDITING[i];
+      editBtn.textContent=EDITING[i]?"Done":"Edit";
+      card.classList.toggle("editing",!!EDITING[i]);
+      renderDayItems(i,box);
+    });
+    title.appendChild(editBtn);
     body.appendChild(title);
     if(d.sub)body.appendChild(el("div","dsub",d.sub));
-
-    var ul=el("ul","items");
-    d.items.forEach(function(it,j){
-      var li=el("li","item");
-      var key="chk:"+i+":"+j;
-      var done=LS.get(key)==="1";
-      if(done)li.classList.add("done");
-      var btn=el("button","tick");
-      btn.type="button";
-      btn.setAttribute("aria-pressed",done?"true":"false");
-      btn.setAttribute("aria-label","Mark done: "+it.txt.replace(/"/g,""));
-      btn.addEventListener("click",function(){
-        var now=btn.getAttribute("aria-pressed")!=="true";
-        btn.setAttribute("aria-pressed",now?"true":"false");
-        li.classList.toggle("done",now);
-        if(now)LS.set(key,"1");else LS.del(key);
-      });
-      var badge=it.badge?' <span class="badge '+it.badge+'">'+(it.badge==="travel"?"train":it.badge==="book"?"book ahead":"kid pick")+'</span>':'';
-      var what=el("div","what",'<span class="txt">'+it.txt+'</span>'+badge+(it.note?'<span class="note">'+it.note+'</span>':''));
-      li.appendChild(btn);
-      li.appendChild(el("div","time",it.time));
-      li.appendChild(what);
-      ul.appendChild(li);
-    });
-    body.appendChild(ul);
-
-    if(d.tips&&d.tips.length){
-      var tips=el("div","tips");
-      d.tips.forEach(function(t){tips.appendChild(el("div","tip",'<span class="ic">◆</span><span>'+t+'</span>'));});
-      body.appendChild(tips);
-    }
-
-    var det=el("details","note-wrap");
-    var nkey="note:"+i;
-    det.innerHTML='<summary>My notes</summary>';
-    var ta=el("textarea");
-    ta.placeholder="Reservations, times, what worked…";
-    ta.value=LS.get(nkey,"");
-    if(ta.value)det.open=true;
-    ta.addEventListener("input",function(){LS.set(nkey,ta.value);});
-    det.appendChild(ta);
-    body.appendChild(det);
-
+    renderDayItems(i,box);
+    body.appendChild(box);
+    if(d.tips&&d.tips.length){var tips=el("div","tips");d.tips.forEach(function(t){tips.appendChild(el("div","tip",'<span class="ic">◆</span><span>'+t+'</span>'));});body.appendChild(tips);}
+    var det=el("details","note-wrap");det.innerHTML='<summary>My notes</summary>';
+    var ta=el("textarea");ta.placeholder="Reservations, confirmation numbers, ideas…";ta.value=LS.get("note:"+i,"");if(ta.value)det.open=true;
+    ta.addEventListener("input",function(){LS.set("note:"+i,ta.value);});
+    det.appendChild(ta);body.appendChild(det);
     card.appendChild(body);
-    root.appendChild(card);
-  });
+    return card;
+  }
+  (function renderItinerary(){
+    var lastSeg=null;
+    DAYS.forEach(function(d,i){
+      if(d.seg!==lastSeg){
+        lastSeg=d.seg;
+        var seg=SEGS.filter(function(s){return s.key===d.seg;})[0];
+        var cc=CITIES[d.seg];
+        var h=el("div","seg-head");h.style.setProperty("--c","var("+cc.v+")");
+        h.innerHTML='<div class="name">'+cc.name+' <span class="jp">'+cc.jp+'</span></div><div class="rule"></div><div class="meta">'+seg.meta+'</div>';
+        root.appendChild(h);
+      }
+      root.appendChild(buildDayCard(i));
+    });
+  })();
 
   // ---- prep checklist ----
   var checks=document.getElementById("checks");
@@ -951,20 +1030,6 @@
   // ---- map (Leaflet + OpenStreetMap) ----
   var MC={tokyo:"#3a4a9f",osaka:"#c26b3c",kyoto:"#6f8047",hiroshima:"#46707a"};
   var MAPOBJ=null,WISHLAYER=null;
-  var GEO={
-    "0:0":[35.7720,140.3929],
-    "1:0":[35.7148,139.7967],"1:1":[35.7101,139.8107],"1:3":[35.7156,139.7745],"1:4":[35.7056,139.7519],
-    "2:0":[35.6764,139.6993],"2:1":[35.6716,139.7031],"2:2":[35.6595,139.7005],"2:3":[35.6493,139.7906],
-    "3:1":[35.6267,139.8850],
-    "4:1":[35.6852,139.7528],
-    "5:3":[34.6873,135.5259],"5:4":[34.6687,135.5013],
-    "6:0":[34.6654,135.4323],
-    "7:0":[34.6654,135.4323],"7:1":[34.6723,135.5006],
-    "8:1":[34.9671,135.7727],"8:2":[34.9949,135.7850],"8:3":[35.0036,135.7785],"8:4":[35.0044,135.7708],
-    "9:1":[34.3955,132.4536],"9:3":[34.2959,132.3199],
-    "10:0":[35.0170,135.6717],"10:2":[35.0394,135.7292],"10:3":[35.0050,135.7649],
-    "11:3":[35.7720,140.3929]
-  };
   function stripHTML(s){var t=document.createElement("div");t.innerHTML=s;return t.textContent||t.innerText||s;}
   function buildFilter(){
     var sel=document.getElementById("mapFilter");if(!sel)return;
@@ -982,13 +1047,13 @@
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"}).addTo(map);
     MAPOBJ=map;WISHLAYER=L.layerGroup().addTo(map);
     var markers=[];
-    DAYS.forEach(function(d,i){
-      d.items.forEach(function(it,j){
-        var g=GEO[i+":"+j];if(!g)return;
-        var f=fmt(d.date),col=MC[d.city]||"#3a4a9f";
-        var m=L.circleMarker(g,{radius:8,weight:2,color:"#fff",opacity:1,fillColor:col,fillOpacity:1});
+    ITIN.forEach(function(items,i){
+      var d=DAYS[i],f=fmt(d.date),col=MC[d.city]||"#3a4a9f";
+      items.forEach(function(it){
+        if(!it.geo)return;
+        var m=L.circleMarker(it.geo,{radius:8,weight:2,color:"#fff",opacity:1,fillColor:col,fillOpacity:1});
         m._city=d.city;m._day=i;
-        m.bindPopup('<b>'+stripHTML(it.txt)+'</b><br><span style="opacity:.7">Day '+(i+1)+' · '+f.mon+' '+f.num+' · '+it.time+'</span>');
+        m.bindPopup('<b>'+stripHTML(it.txt)+'</b><br><span style="opacity:.7">Day '+(i+1)+' · '+f.mon+' '+f.num+' · '+esc(it.time)+'</span>');
         m.addTo(map);markers.push(m);
       });
     });
@@ -1024,7 +1089,7 @@
   initMap();
 
   // ---- backup: export / import ----
-  var PREFIX=["chk:","note:","prep:","mapUrl","pins","theme","stays"];
+  var PREFIX=["chk:","note:","prep:","mapUrl","pins","theme","stays","itin"];
   function isOurs(k){return PREFIX.some(function(p){return k===p||k.indexOf(p)===0;});}
   function exportData(){
     var data={};
