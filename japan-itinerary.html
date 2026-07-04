@@ -458,13 +458,6 @@
   .sc-name{flex:1 1 200px;min-width:140px;font-weight:600}
   .sc-price{flex:0 0 84px;width:84px;font-family:var(--mono)}
   .sc-notes{flex:1 1 150px;min-width:120px}
-  .sc-thumb{flex:none;width:46px;height:46px;border-radius:8px;object-fit:cover;border:1px solid var(--line);background:var(--surface)}
-  .sc-main{flex:1 1 200px;min-width:150px;display:flex;flex-direction:column;gap:3px}
-  .sc-main .sc-name{flex:none;width:100%}
-  .sc-addr{font-size:11.5px;color:var(--ink-faint);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .sc-fetch{flex:none;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer;font-size:14px;line-height:1;padding:0}
-  .sc-fetch:hover{border-color:var(--accent)}
-  .sc-fetch:disabled{opacity:.5;cursor:default}
   .sc-city{flex:0 0 auto;cursor:pointer;font-size:12.5px}
   .sc-open{flex:none;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;font-size:15px;font-weight:600;border:1px solid var(--line);border-radius:8px;color:var(--accent)}
   .sc-open:hover{border-color:var(--accent);background:var(--accent-soft)}
@@ -1372,70 +1365,14 @@
       return host;
     }catch(e){return "";}
   }
-  function cleanTitle(t){var p=t.split(/\s+[|·–—]\s+|\s+-\s+/)[0].trim();return (p&&p.length>2)?p:t.trim();}
-  function absUrl(u,base){try{return new URL(u,base).href;}catch(e){return u||"";}}
-  function fmtAddr(a){
-    if(typeof a==="string")return a.replace(/\s+/g," ").trim();
-    if(!a||typeof a!=="object")return "";
-    var country=a.addressCountry;if(country&&typeof country==="object")country=country.name||"";
-    return [a.streetAddress,a.addressLocality,a.addressRegion,a.postalCode,country].filter(Boolean).join(", ").replace(/\s+/g," ").trim();
-  }
-  function scanLD(node,out){
-    if(!node||typeof node!=="object")return;
-    if(Array.isArray(node)){node.forEach(function(n){scanLD(n,out);});return;}
-    if(node["@graph"])scanLD(node["@graph"],out);
-    var ty=node["@type"];ty=Array.isArray(ty)?ty.join(" "):String(ty||"");
-    if(/Hotel|Lodging|Resort|Apartment|BedAndBreakfast|Motel|Hostel|Place|Product/i.test(ty)){
-      if(!out.name&&node.name)out.name=String(node.name);
-      if(!out.image&&node.image){var im=node.image;out.image=typeof im==="string"?im:(im&&(im.url||(Array.isArray(im)?(typeof im[0]==="string"?im[0]:(im[0]&&im[0].url)):"")))||"";}
-      if(!out.address&&node.address)out.address=fmtAddr(node.address);
-      if(!out.price&&node.offers){var o=Array.isArray(node.offers)?node.offers[0]:node.offers;if(o)out.price=String(o.price||o.lowPrice||(o.priceSpecification&&o.priceSpecification.price)||"");}
-      if(!out.price&&node.priceRange)out.price=String(node.priceRange);
-    }
-    ["mainEntity","about","item"].forEach(function(k){if(node[k])scanLD(node[k],out);});
-  }
-  function parseMeta(htmlStr,base){
-    var doc=new DOMParser().parseFromString(htmlStr,"text/html");
-    function m(sel){var e=doc.querySelector(sel);return e?String(e.getAttribute("content")||"").trim():"";}
-    var out={name:"",image:"",address:"",price:""};
-    out.name=m('meta[property="og:title"]')||m('meta[name="twitter:title"]');
-    out.image=m('meta[property="og:image:secure_url"]')||m('meta[property="og:image"]')||m('meta[property="og:image:url"]')||m('meta[name="twitter:image"]');
-    out.price=m('meta[property="product:price:amount"]')||m('meta[property="og:price:amount"]');
-    var lds=doc.querySelectorAll('script[type="application/ld+json"]');
-    for(var i=0;i<lds.length;i++){var d;try{d=JSON.parse(lds[i].textContent);}catch(e){continue;}scanLD(d,out);}
-    if(!out.name){var t=doc.querySelector("title");if(t)out.name=cleanTitle(t.textContent.replace(/\s+/g," ").trim());}
-    if(out.image)out.image=absUrl(out.image,base);
-    return out;
-  }
-  function fetchMeta(url,cb){
-    fetch("https://api.allorigins.win/get?url="+encodeURIComponent(url)).then(function(r){return r.ok?r.json():null;}).then(function(j){
-      if(!j||!j.contents){cb(null);return;}
-      try{cb(parseMeta(j.contents,url));}catch(e){cb(null);}
-    }).catch(function(){cb(null);});
-  }
   var STAYS=getStays();
   function persist(rerender){setStays(STAYS);renderCoverage();if(rerender){renderStays();if(typeof refreshHotelMarkers==="function")refreshHotelMarkers();}}
   function cityBooked(k){return STAYS.some(function(s){return s.city===k&&s.status==="booked";});}
   function locateStay(s,cb){
-    var q=(s.address?s.address:(s.name||""))+" "+(CITIES[s.city]?CITIES[s.city].name:"")+" Japan";
-    geocode(q,function(hit){
+    geocode((s.name||"")+" "+(CITIES[s.city]?CITIES[s.city].name:"")+" Japan",function(hit){
       if(hit){s.lat=hit.lat;s.lng=hit.lng;setStays(STAYS);}
       if(typeof refreshHotelMarkers==="function")refreshHotelMarkers();
       if(cb)cb(hit);
-    });
-  }
-  // pull name / photo / address (and a price if it's actually in the page) from the hotel link
-  function enrichStay(s,cb){
-    if(!s||!s.url){cb&&cb(false);return;}
-    fetchMeta(s.url,function(meta){
-      if(!meta){cb&&cb(false);return;}
-      var changed=false;
-      if(meta.name&&(!s.name||s.name===deriveName(s.url))){s.name=cleanTitle(meta.name);changed=true;}
-      if(meta.image&&meta.image!==s.image){s.image=meta.image;changed=true;}
-      if(meta.address&&meta.address!==s.address){s.address=meta.address;changed=true;}
-      if(meta.price&&!s.price){s.price=String(meta.price);changed=true;}
-      if(changed){persist(true);locateStay(s);}
-      cb&&cb(changed);
     });
   }
   function renderCoverage(){
@@ -1461,21 +1398,11 @@
     pill.addEventListener("click",function(){var i=STATUS_ORDER.indexOf(s.status);s.status=STATUS_ORDER[(i+1)%STATUS_ORDER.length];persist(true);});
     var name=el("input","sc-name");name.type="text";name.value=s.name||"";name.placeholder=hostname(s.url)||"Hotel name";
     name.addEventListener("input",function(){s.name=name.value;persist(false);});
-    var main=el("div","sc-main");main.appendChild(name);
-    var addr=el("div","sc-addr");if(s.address){addr.textContent=s.address;addr.title=s.address;}else{addr.style.display="none";}
-    main.appendChild(addr);
-    var thumb=el("img","sc-thumb");thumb.alt="";thumb.loading="lazy";
-    if(s.image){thumb.src=s.image;thumb.addEventListener("error",function(){thumb.style.display="none";});}else{thumb.style.display="none";}
     var price=el("input","sc-price");price.type="text";price.value=s.price||"";price.placeholder="¥/night";price.addEventListener("input",function(){s.price=price.value;persist(false);});
     var notes=el("input","sc-notes");notes.type="text";notes.value=s.notes||"";notes.placeholder="Notes — area, who suggested it…";notes.addEventListener("input",function(){s.notes=notes.value;persist(false);});
     var city=el("select","sc-city");
     ["tokyo","osaka","kyoto"].forEach(function(k){var o=el("option");o.value=k;o.textContent=CITIES[k].name;if(s.city===k)o.selected=true;city.appendChild(o);});
     city.addEventListener("change",function(){s.city=city.value;persist(true);});
-    var fetchb=el("button","sc-fetch");fetchb.type="button";fetchb.textContent="↻";fetchb.title="Pull details from the link — name, photo, address";
-    fetchb.addEventListener("click",function(){
-      if(!s.url)return;fetchb.disabled=true;fetchb.textContent="…";
-      enrichStay(s,function(changed){fetchb.disabled=false;fetchb.textContent="↻";fetchb.title=changed?"Updated ✓ — click to re-pull":"Couldn't read that page — some sites block it";});
-    });
     var open=el("a","sc-open");
     if(s.url){open.href=s.url;open.target="_blank";open.rel="noopener";open.textContent="↗";open.title="Open link";}
     else{open.classList.add("muted");open.textContent="–";open.title="No link";}
@@ -1483,7 +1410,7 @@
     loc.addEventListener("click",function(){loc.textContent="…";loc.disabled=true;locateStay(s,function(hit){loc.disabled=false;loc.textContent="📍";loc.classList.toggle("has",!!hit);loc.title=hit?"Located ✓ — click to re-find":"Not found — refine the name, then retry";});});
     var del=el("button","sc-del");del.type="button";del.textContent="✕";del.title="Remove";del.setAttribute("aria-label","Remove hotel");
     del.addEventListener("click",function(){STAYS=STAYS.filter(function(x){return x.id!==s.id;});persist(true);});
-    row.appendChild(pill);row.appendChild(thumb);row.appendChild(main);row.appendChild(price);row.appendChild(notes);row.appendChild(city);row.appendChild(fetchb);row.appendChild(loc);row.appendChild(open);row.appendChild(del);
+    row.appendChild(pill);row.appendChild(name);row.appendChild(price);row.appendChild(notes);row.appendChild(city);row.appendChild(loc);row.appendChild(open);row.appendChild(del);
     return row;
   }
   function renderStays(){
@@ -1509,11 +1436,9 @@
     if(!url){uEl.focus();return;}
     if(!/^https?:\/\//i.test(url))url="https://"+url;
     var id="s"+Date.now()+"-"+Math.floor(Math.random()*1000);
-    STAYS.push({id:id,name:deriveName(url),url:url,city:cy,status:"idea",price:"",notes:"",image:"",address:""});
+    STAYS.push({id:id,name:deriveName(url),url:url,city:cy,status:"idea",price:"",notes:""});
     persist(true);uEl.value="";uEl.focus();
-    var added=STAYS[STAYS.length-1];
-    locateStay(added);
-    enrichStay(added);
+    locateStay(STAYS[STAYS.length-1]);
   });
   var suEl=document.getElementById("stayUrl");if(suEl&&sa)suEl.addEventListener("keydown",function(ev){if(ev.key==="Enter")sa.click();});
   renderStays();renderCoverage();if(typeof refreshHotelMarkers==="function")refreshHotelMarkers();
