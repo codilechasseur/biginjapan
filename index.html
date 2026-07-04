@@ -596,7 +596,8 @@
 
       <div class="addrow">
         <input type="text" id="pinInput" placeholder="Add a place — e.g. Nintendo store, Ghibli Museum…" />
-        <select id="pinCity">
+        <select id="pinCity" aria-label="City (auto-detected unless you pick one)">
+          <option value="auto">City: auto</option>
           <option value="tokyo">Tokyo</option>
           <option value="osaka">Osaka</option>
           <option value="kyoto">Kyoto</option>
@@ -1101,15 +1102,19 @@
   }
   function addOne(){
     var name=pinInput.value.trim();if(!name)return;
-    var city=pinCity.value,id=name+"|"+city+"|"+Date.now();
-    var pins=getPins();
-    pins.push({id:id,name:name,city:city});
-    setPins(pins);pinInput.value="";renderPins();pinInput.focus();
-    setImportHint("Finding “"+name+"” on the map…");
-    geocode(name+" "+(CITIES[city]?CITIES[city].name:"")+" Japan",function(hit){
-      var all=getPins(),p=null;for(var i=0;i<all.length;i++){if(all[i].id===id){p=all[i];break;}}
-      if(p&&hit){p.lat=hit.lat;p.lng=hit.lng;setPins(all);renderPins();if(typeof addWishlistToMap==="function")addWishlistToMap();setImportHint("Added “"+name+"” — pinned on the map.");}
-      else setImportHint("Added “"+name+"”, but couldn't place it on the map — try a more specific name.");
+    var sel=pinCity.value;                                   // "auto" or a specific city
+    var id="p"+Date.now()+"-"+Math.floor(Math.random()*1000);
+    var bias=(sel!=="auto"&&CITIES[sel])?(" "+CITIES[sel].name):"";
+    pinInput.value="";pinInput.focus();
+    setImportHint("Finding “"+name+"”…");
+    geocode(name+bias+" Japan",function(hit){
+      // work out the city from where the place actually is, unless one was forced
+      var city=(sel!=="auto")?sel:(hit?cityForCoords(hit.lat,hit.lng):"tokyo");
+      var pins=getPins();
+      pins.push({id:id,name:name,city:city,lat:hit?hit.lat:null,lng:hit?hit.lng:null});
+      setPins(pins);renderPins();if(typeof addWishlistToMap==="function")addWishlistToMap();
+      if(hit)setImportHint("Added “"+name+"” — pinned in "+(CITIES[city]?CITIES[city].name:city)+".");
+      else setImportHint("Added “"+name+"” under Tokyo, but couldn't find it on the map — try a more specific name, or pick a city.");
     });
   }
   addPin.addEventListener("click",addOne);
