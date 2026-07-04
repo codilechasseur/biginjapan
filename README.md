@@ -16,23 +16,41 @@ same content without the page wrapper (used for the claude.ai preview); you can 
 The map (OpenStreetMap tiles) and cloud sync need a real host like this — they don't work
 inside the claude.ai preview sandbox.
 
-## Cloud sync across phones & laptops (optional)
+## Cloud sync across phones & laptops (Google sign-in)
 
-Sync is off until you connect a free Firebase Realtime Database (uses your existing Google account).
+The plan syncs automatically once you **Sign in with Google** — nothing to type per device.
+Access is locked by Firebase security rules to specific accounts, so the public page can't
+expose your data. This repo is already wired to the `big-in-japan` Firebase project.
 
-1. [console.firebase.google.com](https://console.firebase.google.com) → **Add project** (skip Analytics).
-2. **Build → Realtime Database → Create Database** → start in test mode.
-3. Open the **Rules** tab and set (test mode expires after 30 days, this doesn't):
+One-time setup in the [Firebase console](https://console.firebase.google.com) (done per project):
+
+1. **Authentication → Sign-in method →** enable **Google**.
+2. **Authentication → Settings → Authorized domains →** add your Pages domain
+   (`codilechasseur.github.io`).
+3. **Realtime Database → Rules →** lock the trip to your accounts, then Publish:
    ```json
-   { "rules": { ".read": true, ".write": true } }
+   {
+     "rules": {
+       "japan": {
+         "trip": {
+           ".read":  "auth != null && (auth.token.email == 'codilechasseur@gmail.com' || auth.token.email == 'jpovarchook@gmail.com')",
+           ".write": "auth != null && (auth.token.email == 'codilechasseur@gmail.com' || auth.token.email == 'jpovarchook@gmail.com')"
+         }
+       }
+     }
+   }
    ```
-   Publish.
-4. Copy the database URL (`https://<project>-default-rtdb.firebaseio.com`).
-5. On the live site → **Cloud sync** panel → paste the URL + a trip code (e.g. `our-japan-trip`) → **Connect**.
-   Enter the same URL + code on every device. Refresh a device to pull the latest.
+4. On the live site → **Cloud sync** panel → **Sign in with Google** on each device. The first
+   sign-in from the device that has the plan seeds the shared `japan/trip` node.
 
-The Firebase URL is entered in the running app and saved per-device — it is **not** stored in
-this repo, so a public repo exposes no private data. Keep an **Export backup** as a safety net.
+The Firebase **web config** (including the API key) is committed in `index.html` — that's expected.
+A Firebase web API key is a **public identifier, not a secret**; the security boundary is the rules
+above plus the authorized-domains list. GitHub's secret scanner may flag it as a "secret" — that's a
+false positive you can dismiss. For good measure, restrict the key in
+**Google Cloud Console → Credentials → HTTP referrers** to your domain. To point the app at a
+different Firebase project, edit `FIREBASE_CONFIG` near the bottom of `index.html`.
+
+Keep an **Export backup** as an offline safety net regardless.
 
 ## Your data
 
