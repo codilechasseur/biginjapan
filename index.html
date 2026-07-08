@@ -400,6 +400,12 @@
   .mapfilter{background:var(--surface-2);border:1px solid var(--line);border-radius:9px;color:var(--ink);font-family:var(--sans);font-size:14px;padding:0 12px;height:40px;cursor:pointer;max-width:100%}
   .mapfilter:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   .mapbox{height:58vh;min-height:340px;border-radius:12px;overflow:hidden;border:1px solid var(--line);position:relative;z-index:0;background:var(--surface-2)}
+  .mapbox.map-fs{border-radius:0;border:0}
+  .mapbox:fullscreen{width:100%;height:100%}
+  .fs-ctl a{font-size:16px;font-weight:400;line-height:26px;text-align:center;color:var(--ink-soft)}
+  .fs-ctl a:hover{color:var(--accent)}
+  .leaflet-bar a{background:var(--surface);border-bottom-color:var(--line)}
+  .leaflet-bar a:hover{background:var(--surface-2)}
   .leaflet-container{font-family:var(--sans)}
   .leaflet-popup-content{font-size:13px;line-height:1.4}
   .mapnote{display:none;color:var(--ink-soft);font-size:14px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:16px;line-height:1.5}
@@ -1211,6 +1217,7 @@
     var next=cur==="dark"?"light":"dark";
     document.documentElement.setAttribute("data-theme",next);
     LS.set("theme",next);
+    if(typeof setBasemap==="function")setBasemap();
   });
 
   document.getElementById("printBtn").addEventListener("click",function(){window.print();});
@@ -1228,6 +1235,7 @@
   // ---- map (Leaflet + OpenStreetMap) ----
   var MC={tokyo:"#3a4a9f",osaka:"#c26b3c",kyoto:"#6f8047",hiroshima:"#46707a"};
   var MAPOBJ=null,ITINLAYER=null,WISHLAYER=null,HOTELLAYER=null,ITINMARKERS=[],SCRATCHMARKERS=[],HOTELMARKERS=[];
+  var BASELAYER=null,REFLAYER=null;
   var LAYERON={itin:true,scratch:true,hotels:true},CURCITY=null;
   function stripHTML(s){var t=document.createElement("div");t.innerHTML=s;return t.textContent||t.innerText||s;}
   function cityForCoords(lat,lng){
@@ -1323,13 +1331,61 @@
     buildLayerToggles();
     if(typeof L==="undefined"){panel.classList.add("mapoff");return;}
     var map=L.map("map",{scrollWheelZoom:false}).setView([36.5,137.8],5);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap contributors"}).addTo(map);
-    MAPOBJ=map;ITINLAYER=L.layerGroup().addTo(map);WISHLAYER=L.layerGroup().addTo(map);HOTELLAYER=L.layerGroup().addTo(map);
+    MAPOBJ=map;
+    setBasemap();                                  // Esri gray canvas — English labels, matches the theme
+    ITINLAYER=L.layerGroup().addTo(map);WISHLAYER=L.layerGroup().addTo(map);HOTELLAYER=L.layerGroup().addTo(map);
+    addFullscreenControl(map);
     refreshItinMarkers();addWishlistToMap();applyLayers();
     var all=ITINMARKERS.map(function(m){return m.getLatLng();});
     if(all.length)map.fitBounds(L.latLngBounds(all).pad(0.2));
     setupScrollFollow();
     setTimeout(function(){map.invalidateSize();},250);
+  }
+  // Swap the basemap to match the active light/dark theme. Esri's raster canvas
+  // basemaps carry English/romanised labels worldwide, so Japan reads in English.
+  function setBasemap(){
+    if(!MAPOBJ||typeof L==="undefined")return;
+    var dark=document.documentElement.getAttribute("data-theme")==="dark"||
+             (!document.documentElement.getAttribute("data-theme")&&matchMedia("(prefers-color-scheme:dark)").matches);
+    var tone=dark?"Dark":"Light",
+        base="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_"+tone+"_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+        ref="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_"+tone+"_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
+        attr="Tiles &copy; Esri";
+    if(BASELAYER)MAPOBJ.removeLayer(BASELAYER);
+    if(REFLAYER)MAPOBJ.removeLayer(REFLAYER);
+    BASELAYER=L.tileLayer(base,{maxZoom:16,attribution:attr}).addTo(MAPOBJ);
+    REFLAYER=L.tileLayer(ref,{maxZoom:16,attribution:attr}).addTo(MAPOBJ);
+    BASELAYER.bringToBack();
+  }
+  // Fullscreen toggle as a Leaflet control (native Fullscreen API, no plugin).
+  function addFullscreenControl(map){
+    var box=document.getElementById("map");if(!box)return;
+    var fsBtn=null,fsExpand="",fsShrink="";
+    var Ctl=L.Control.extend({options:{position:"topleft"},onAdd:function(){
+      var c=L.DomUtil.create("div","leaflet-bar leaflet-control fs-ctl"),
+          a=L.DomUtil.create("a","",c);fsBtn=a;
+      a.href="#";a.title="Toggle fullscreen";a.setAttribute("role","button");
+      a.setAttribute("aria-label","Toggle fullscreen map");
+      fsExpand='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+      fsShrink='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+      a.innerHTML=fsExpand;
+      L.DomEvent.on(a,"click",function(e){
+        L.DomEvent.stop(e);
+        var fsEl=document.fullscreenElement||document.webkitFullscreenElement;
+        if(fsEl){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}
+        else{(box.requestFullscreen||box.webkitRequestFullscreen).call(box);}
+      });
+      return c;
+    }});
+    map.addControl(new Ctl());
+    function onFs(){
+      var on=(document.fullscreenElement||document.webkitFullscreenElement)===box;
+      box.classList.toggle("map-fs",on);
+      if(fsBtn){fsBtn.innerHTML=on?fsShrink:fsExpand;fsBtn.title=on?"Exit fullscreen":"Toggle fullscreen";}
+      setTimeout(function(){map.invalidateSize();},120);
+    }
+    document.addEventListener("fullscreenchange",onFs);
+    document.addEventListener("webkitfullscreenchange",onFs);
   }
   initMap();
 
