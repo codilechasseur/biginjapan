@@ -446,7 +446,7 @@
   .mapnote{display:none;color:var(--ink-soft);font-size:14px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:16px;line-height:1.5}
   #mapPanel.mapoff .mapbox,#mapPanel.mapoff .mapfilter{display:none}
   #mapPanel.mapoff .mapnote{display:block}
-  .wrap.wide{max-width:1240px}
+  .wrap.wide{max-width:1340px}
   .trip-layout{display:grid;grid-template-columns:1fr;gap:20px}
   /* mobile/tablet: read the plan first, map sits below the itinerary */
   #mapPanel{order:2}
@@ -536,7 +536,12 @@
 
   /* ---- hotel chips on day cards ---- */
   .hotel-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
-  .hotel-chip{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:5px 10px;font-size:13px;border:1px solid transparent}
+  .hotel-chip{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:5px 10px;font-size:13px;border:1px solid transparent;font-family:var(--sans);color:var(--ink);cursor:pointer;text-align:left}
+  .hotel-chip:hover{filter:brightness(1.04)}
+  .hotel-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .hotel-chip.hc-empty{background:transparent;border:1px dashed var(--line-strong);color:var(--ink-faint)}
+  .hotel-chip.hc-empty:hover{border-color:var(--accent);color:var(--accent)}
+  .hotel-chip.hc-empty .hc-name{font-weight:500;color:inherit}
   .hotel-chip.hc-in{background:color-mix(in srgb,var(--kyoto) 11%,var(--surface));border-color:color-mix(in srgb,var(--kyoto) 30%,transparent)}
   .hotel-chip.hc-stay{background:color-mix(in srgb,var(--osaka) 10%,var(--surface));border-color:color-mix(in srgb,var(--osaka) 28%,transparent)}
   .hotel-chip.hc-out{background:var(--surface-2);border-color:var(--line)}
@@ -547,6 +552,19 @@
   .hotel-chip.hc-in .hc-tag{color:var(--kyoto)}
   .hotel-chip.hc-stay .hc-tag{color:var(--osaka)}
   .hotel-chip.hc-out .hc-tag{color:var(--ink-faint)}
+  .hc-conf{font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);background:var(--surface-2);border-radius:5px;padding:1px 5px}
+  /* inline hotel editor on a day card */
+  .hotel-editor{display:flex;flex-direction:column;gap:7px;background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:12px;margin:0 0 12px;max-width:420px}
+  .he-title{font-weight:600;font-size:13px}
+  .he-field{background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:var(--sans);font-size:13.5px;padding:8px 9px;width:100%;box-sizing:border-box}
+  .he-field:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+  .he-tools{display:flex;gap:8px;align-items:center;margin-top:2px}
+  .he-save{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans)}
+  :root[data-theme="dark"] .he-save{color:#14161d}
+  @media (prefers-color-scheme:dark){.he-save{color:#14161d}}
+  .he-cancel{border:0;background:transparent;color:var(--ink-faint);font-size:13px;cursor:pointer}
+  .he-cancel:hover{color:var(--ink-soft)}
+  .he-remove{border:0;background:transparent;color:var(--osaka);font-size:13px;cursor:pointer;margin-left:auto}
 
   @media print{
     .topbar,.theme-btn,.print-btn,.note-wrap,.journey,.maprow,.addrow,.callout .ico,#mapLink,#mapPanel,.backup-row,.day-edit,.import-row,.city-spine{display:none!important}
@@ -611,25 +629,6 @@
 </div>
 
 <div class="wrap">
-
-  <section class="block" id="stays">
-    <div class="panel">
-      <div class="panel-head">
-        <div><h2>Where we're staying</h2><p class="sub">Paste each hotel link — the name fills in from the page automatically. Compare by city, then mark the winner <em>Booked</em>; a city counts as covered once one room is booked.</p></div>
-      </div>
-      <div class="coverage" id="coverage"></div>
-      <div class="stay-add">
-        <input type="url" id="stayUrl" placeholder="Paste a hotel link…" />
-        <select id="stayCity" aria-label="City for this hotel">
-          <option value="tokyo">Tokyo</option>
-          <option value="osaka">Osaka</option>
-          <option value="kyoto">Kyoto</option>
-        </select>
-        <button class="btn" id="stayAdd" type="button">Add</button>
-      </div>
-      <div class="stay-list" id="stayList"></div>
-    </div>
-  </section>
 
   <section class="block">
     <div class="panel">
@@ -705,7 +704,7 @@
   <footer>
     <div class="jp">よい旅を</div>
     <div>Have a wonderful trip. · Everything you tick, note, or pin is saved in this browser only.</div>
-    <div style="margin-top:8px;font-size:11px;opacity:0.5">v1.2</div>
+    <div style="margin-top:8px;font-size:11px;opacity:0.5">v1.3</div>
   </footer>
 </div>
 
@@ -947,24 +946,87 @@
   function getBookedStayForCity(city){
     return getStays().find(function(s){return s.city===city&&s.status==="booked";})||null;
   }
-  function renderHotelChip(i,chipEl){
-    // NIGHTS is declared later via var (hoisting → undefined until that line runs)
+  // the itinerary now owns one hotel per city (kept as a booked stay so the map markers
+  // and any legacy data keep working). Prefer a booked entry, else the first for that city.
+  function getCityHotel(city){
+    var ss=getStays().filter(function(s){return s.city===city;});
+    return ss.filter(function(s){return s.status==="booked";})[0]||ss[0]||null;
+  }
+  function saveCityHotel(city,fields){
+    var list=getStays(),found=null;
+    for(var k=0;k<list.length;k++){if(list[k].city===city){found=list[k];break;}}
+    if(!found){found={id:"h"+Date.now()+"-"+Math.floor(Math.random()*1000),city:city};list.push(found);}
+    found.status="booked";found.name=fields.name;found.url=fields.url;found.conf=fields.conf;
+    setStays(list);if(typeof STAYS!=="undefined")STAYS=list;
+    renderAllHotelChips();if(typeof refreshHotelMarkers==="function")refreshHotelMarkers();
+    // geocode so it drops onto the map (best-effort; ignored if it can't be found)
+    if(found.name){geocode(found.name+" "+(CITIES[city]?CITIES[city].name:"")+" Japan",function(hit){
+      if(!hit)return;var l=getStays();for(var j=0;j<l.length;j++){if(l[j].id===found.id){l[j].lat=hit.lat;l[j].lng=hit.lng;}}
+      setStays(l);if(typeof STAYS!=="undefined")STAYS=l;if(typeof refreshHotelMarkers==="function")refreshHotelMarkers();
+    });}
+  }
+  function removeCityHotel(city){
+    var list=getStays().filter(function(s){return s.city!==city;});
+    setStays(list);if(typeof STAYS!=="undefined")STAYS=list;
+    renderAllHotelChips();if(typeof refreshHotelMarkers==="function")refreshHotelMarkers();
+  }
+  function hotelRolesForDay(i){
     var nights=(typeof NIGHTS!=="undefined")?NIGHTS:null;
-    var tonightNight=(nights&&nights[i])||null;
-    var lastNight=(nights&&i>0)?nights[i-1]||null:null;
-    // check-out: slept here last night but moving on today (or flying home)
-    var checkoutCity=lastNight&&(!tonightNight||lastNight.city!==tonightNight.city)?lastNight.city:null;
-    // check-in: arriving in a new city tonight
-    var checkinCity=tonightNight&&(!lastNight||lastNight.city!==tonightNight.city)?tonightNight.city:null;
-    // just staying tonight (not a transition)
-    var stayCity=(!checkinCity&&tonightNight)?tonightNight.city:null;
-    chipEl.innerHTML="";
-    var parts=[];
-    function chip(cls,s,tag){if(s&&s.name)parts.push('<div class="hotel-chip '+cls+'"><span class="hc-ico">🏨</span><span class="hc-name">'+esc(s.name)+'</span><span class="hc-divider"></span><span class="hc-tag">'+tag+'</span></div>');}
-    if(checkoutCity)chip("hc-out",getBookedStayForCity(checkoutCity),"Check out");
-    if(checkinCity)chip("hc-in",getBookedStayForCity(checkinCity),"Check in");
-    if(stayCity)chip("hc-stay",getBookedStayForCity(stayCity),"Tonight");
-    chipEl.innerHTML=parts.join("");
+    var tonight=(nights&&nights[i])||null,last=(nights&&i>0)?nights[i-1]||null:null;
+    var checkoutCity=last&&(!tonight||last.city!==tonight.city)?last.city:null;
+    var checkinCity=tonight&&(!last||last.city!==tonight.city)?tonight.city:null;
+    var stayCity=(!checkinCity&&tonight)?tonight.city:null;
+    var roles=[];
+    if(checkoutCity)roles.push({city:checkoutCity,cls:"hc-out",tag:"Check out"});
+    if(checkinCity)roles.push({city:checkinCity,cls:"hc-in",tag:"Check in"});
+    if(stayCity)roles.push({city:stayCity,cls:"hc-stay",tag:"Tonight"});
+    return roles;
+  }
+  function renderHotelChip(i,host){
+    host.innerHTML="";
+    hotelRolesForDay(i).forEach(function(r){
+      var hotel=getCityHotel(r.city),cityName=CITIES[r.city]?CITIES[r.city].name:r.city;
+      var hasHotel=!!(hotel&&hotel.name);
+      // once a hotel is set it shows on every relevant day; when it's missing, only the
+      // check-in day offers the "+ Add hotel" prompt so the middle nights aren't cluttered.
+      if(!hasHotel&&r.cls!=="hc-in")return;
+      var chip=el("button","hotel-chip "+r.cls+(hasHotel?"":" hc-empty"));chip.type="button";
+      if(hasHotel){
+        chip.innerHTML='<span class="hc-ico">🏨</span><span class="hc-name">'+esc(hotel.name)+'</span>'+(hotel.conf?'<span class="hc-conf">'+esc(hotel.conf)+'</span>':'')+'<span class="hc-divider"></span><span class="hc-tag">'+r.tag+'</span>';
+        chip.title="Edit "+cityName+" hotel";
+      }else{
+        chip.innerHTML='<span class="hc-ico">＋</span><span class="hc-name">Add '+esc(cityName)+' hotel</span><span class="hc-divider"></span><span class="hc-tag">'+r.tag+'</span>';
+        chip.title="Add your "+cityName+" hotel";
+      }
+      chip.addEventListener("click",function(){openHotelEditor(r.city,host,i);});
+      host.appendChild(chip);
+    });
+  }
+  function openHotelEditor(city,host,i){
+    var hotel=getCityHotel(city)||{},cityName=CITIES[city]?CITIES[city].name:city;
+    host.innerHTML="";
+    var box=el("div","hotel-editor");
+    box.appendChild(el("div","he-title",'🏨 '+esc(cityName)+' hotel'));
+    var nameIn=el("input","he-field");nameIn.type="text";nameIn.value=hotel.name||"";nameIn.placeholder="Hotel name";
+    var urlIn=el("input","he-field");urlIn.type="url";urlIn.value=hotel.url||"";urlIn.placeholder="Booking link (optional)";
+    var confIn=el("input","he-field");confIn.type="text";confIn.value=hotel.conf||"";confIn.placeholder="Confirmation # (optional)";
+    box.appendChild(nameIn);box.appendChild(urlIn);box.appendChild(confIn);
+    var tools=el("div","he-tools");
+    var save=el("button","he-save");save.type="button";save.textContent="Save";
+    save.addEventListener("click",function(){
+      var nm=nameIn.value.trim();
+      if(!nm){removeCityHotel(city);return;}
+      saveCityHotel(city,{name:nm,url:urlIn.value.trim(),conf:confIn.value.trim()});
+    });
+    tools.appendChild(save);
+    var cancel=el("button","he-cancel");cancel.type="button";cancel.textContent="Cancel";
+    cancel.addEventListener("click",function(){renderHotelChip(i,host);});
+    tools.appendChild(cancel);
+    if(hotel.name){var rm=el("button","he-remove");rm.type="button";rm.textContent="Remove";rm.addEventListener("click",function(){removeCityHotel(city);});tools.appendChild(rm);}
+    box.appendChild(tools);host.appendChild(box);
+    nameIn.focus();
+    nameIn.addEventListener("keydown",function(e){if(e.key==="Enter")save.click();});
+    confIn.addEventListener("keydown",function(e){if(e.key==="Enter")save.click();});
   }
   function renderAllHotelChips(){CHIP_ELS.forEach(function(el,i){if(el)renderHotelChip(i,el);});}
   var BADGES=[{v:"",t:"— no tag"},{v:"travel",t:"Train"},{v:"book",t:"Book ahead"},{v:"kid",t:"Kid pick"}];
