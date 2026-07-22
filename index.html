@@ -704,7 +704,7 @@
   <footer>
     <div class="jp">よい旅を</div>
     <div>Have a wonderful trip. · Everything you tick, note, or pin is saved in this browser only.</div>
-    <div style="margin-top:8px;font-size:11px;opacity:0.5">v1.3</div>
+    <div style="margin-top:8px;font-size:11px;opacity:0.5">v1.4</div>
   </footer>
 </div>
 
@@ -953,8 +953,11 @@
     return ss.filter(function(s){return s.status==="booked";})[0]||ss[0]||null;
   }
   function saveCityHotel(city,fields){
-    var list=getStays(),found=null;
-    for(var k=0;k<list.length;k++){if(list[k].city===city){found=list[k];break;}}
+    var list=getStays();
+    // update the SAME record the editor showed (booked-first, else first for the city) so we
+    // never overwrite a different candidate or silently orphan real booking data.
+    var found=list.filter(function(s){return s.city===city&&s.status==="booked";})[0]
+            ||list.filter(function(s){return s.city===city;})[0]||null;
     if(!found){found={id:"h"+Date.now()+"-"+Math.floor(Math.random()*1000),city:city};list.push(found);}
     found.status="booked";found.name=fields.name;found.url=fields.url;found.conf=fields.conf;
     setStays(list);if(typeof STAYS!=="undefined")STAYS=list;
@@ -1015,14 +1018,17 @@
     var save=el("button","he-save");save.type="button";save.textContent="Save";
     save.addEventListener("click",function(){
       var nm=nameIn.value.trim();
-      if(!nm){removeCityHotel(city);return;}
+      // an empty name is never destructive — just close the editor, leaving any saved hotel intact
+      if(!nm){renderHotelChip(i,host);return;}
       saveCityHotel(city,{name:nm,url:urlIn.value.trim(),conf:confIn.value.trim()});
     });
     tools.appendChild(save);
     var cancel=el("button","he-cancel");cancel.type="button";cancel.textContent="Cancel";
     cancel.addEventListener("click",function(){renderHotelChip(i,host);});
     tools.appendChild(cancel);
-    if(hotel.name){var rm=el("button","he-remove");rm.type="button";rm.textContent="Remove";rm.addEventListener("click",function(){removeCityHotel(city);});tools.appendChild(rm);}
+    if(hotel.name){var rm=el("button","he-remove");rm.type="button";rm.textContent="Remove";rm.addEventListener("click",function(){
+      if(confirm("Remove the saved "+cityName+" hotel from the plan? This clears its name, link and confirmation number."))removeCityHotel(city);
+    });tools.appendChild(rm);}
     box.appendChild(tools);host.appendChild(box);
     nameIn.focus();
     nameIn.addEventListener("keydown",function(e){if(e.key==="Enter")save.click();});
@@ -1865,7 +1871,12 @@
         // read the current remote version first, then bump past it — clock-independent, collision-safe
         fetch(u).then(function(r){return r.ok?r.json():null;}).then(function(j){
           var remoteV=(j&&j.v)||0,newV=Math.max(s.localV(),remoteV)+1;
-          var payload={data:s.collect(),v:newV,updated:Date.now()};
+          // SAFETY: start from the cloud's data and overlay ours, so a device that never received
+          // some keys (e.g. booked hotels entered on another device) can't wipe them from the cloud.
+          var merged={},remoteData=(j&&j.data)||{},localData=s.collect();
+          Object.keys(remoteData).forEach(function(k){if(isOurs(k))merged[k]=remoteData[k];});
+          Object.keys(localData).forEach(function(k){merged[k]=localData[k];});
+          var payload={data:merged,v:newV,updated:Date.now()};
           return fetch(u,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).then(function(r){
             if(!r.ok)throw 0;
             try{localStorage.setItem("syncV",String(newV));}catch(e){}
@@ -1892,11 +1903,21 @@
               Object.keys(j.data).forEach(function(k){if(isOurs(k)){try{localStorage.setItem(k,j.data[k]);}catch(e){}}});
               try{localStorage.setItem("syncV",String(remoteV));}catch(e){}
               s.applying=false;setStatus("synced ✓","ok");cb&&cb(true,"remote");
-            }else if(localV>remoteV || s.normalize(j.data)!==s.normalize(s.collect())){
-              // We're ahead, or the same version but our content differs — heal by pushing local up
-              // to a new version. Converges in one push (no reload loop) and merges local-only keys.
+            }else if(localV>remoteV){
+              // We're strictly ahead — heal by pushing local up (push preserves any cloud-only keys).
               s.push();cb&&cb(true,"local");
-            }else{setStatus("synced ✓","ok");cb&&cb(true,"same");}
+            }else{
+              // Same version. First adopt any keys the cloud has that we never received (e.g. a hotel
+              // booked on another device) so they show here — otherwise this device would re-push
+              // forever without them, and could even overwrite them.
+              s.applying=true;
+              var localData=s.collect(),gained=false;
+              Object.keys(j.data).forEach(function(k){if(isOurs(k)&&!(k in localData)){try{localStorage.setItem(k,j.data[k]);gained=true;}catch(e){}}});
+              s.applying=false;
+              if(gained){try{localStorage.setItem("syncV",String(remoteV));}catch(e){}setStatus("synced ✓","ok");cb&&cb(true,"remote");}
+              else if(s.normalize(j.data)!==s.normalize(s.collect())){s.push();cb&&cb(true,"local");}
+              else{setStatus("synced ✓","ok");cb&&cb(true,"same");}
+            }
           }else{s.push();cb&&cb(true,"new");}
         }).catch(function(){setStatus("couldn't reach the database","warn");cb&&cb(false);});
       });
