@@ -704,7 +704,7 @@
   <footer>
     <div class="jp">よい旅を</div>
     <div>Have a wonderful trip. · Everything you tick, note, or pin is saved in this browser only.</div>
-    <div style="margin-top:8px;font-size:11px;opacity:0.5">v1.5</div>
+    <div style="margin-top:8px;font-size:11px;opacity:0.5">v1.6</div>
   </footer>
 </div>
 
@@ -976,11 +976,9 @@
   function hotelRolesForDay(i){
     var nights=(typeof NIGHTS!=="undefined")?NIGHTS:null;
     var tonight=(nights&&nights[i])||null,last=(nights&&i>0)?nights[i-1]||null:null;
-    var checkoutCity=last&&(!tonight||last.city!==tonight.city)?last.city:null;
     var checkinCity=tonight&&(!last||last.city!==tonight.city)?tonight.city:null;
     var stayCity=(!checkinCity&&tonight)?tonight.city:null;
     var roles=[];
-    if(checkoutCity)roles.push({city:checkoutCity,cls:"hc-out",tag:"Check out"});
     if(checkinCity)roles.push({city:checkinCity,cls:"hc-in",tag:"Check in"});
     if(stayCity)roles.push({city:stayCity,cls:"hc-stay",tag:"Tonight"});
     return roles;
