@@ -485,6 +485,20 @@
   .hotel-pin{width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--surface);border:2px solid var(--osaka);border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.35)}
   .hotel-pin.booked{border-color:var(--kyoto);box-shadow:0 0 0 3px color-mix(in srgb,var(--kyoto) 35%,transparent),0 1px 4px rgba(0,0,0,.35)}
 
+  /* ---- hotel chips on day cards ---- */
+  .hotel-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+  .hotel-chip{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:5px 10px;font-size:13px;border:1px solid transparent}
+  .hotel-chip.hc-in{background:color-mix(in srgb,var(--kyoto) 11%,var(--surface));border-color:color-mix(in srgb,var(--kyoto) 30%,transparent)}
+  .hotel-chip.hc-stay{background:color-mix(in srgb,var(--osaka) 10%,var(--surface));border-color:color-mix(in srgb,var(--osaka) 28%,transparent)}
+  .hotel-chip.hc-out{background:var(--surface-2);border-color:var(--line)}
+  .hc-ico{font-size:13px;line-height:1}
+  .hc-name{font-weight:600;color:var(--ink)}
+  .hc-divider{width:1px;height:11px;background:var(--line-strong);margin:0 2px;flex:none}
+  .hc-tag{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+  .hotel-chip.hc-in .hc-tag{color:var(--kyoto)}
+  .hotel-chip.hc-stay .hc-tag{color:var(--osaka)}
+  .hotel-chip.hc-out .hc-tag{color:var(--ink-faint)}
+
   @media print{
     .topbar,.theme-btn,.print-btn,.note-wrap,.journey,.maprow,.addrow,.callout .ico,#mapLink,#mapPanel,.backup-row,.day-edit,.import-row,.city-spine{display:none!important}
     body{background:#fff;color:#000;font-size:11px}
@@ -875,6 +889,33 @@
   function saveItin(){LS.set("itin",JSON.stringify(ITIN));}
   if(!LS.get("itin",""))saveItin();
   var EDITING={};
+  var CHIP_ELS=[];
+  // hotel-chip helpers — NIGHTS is assigned later in the file (var hoisting leaves it
+  // undefined until execution reaches that line); getStays is a function declaration
+  // so it is fully hoisted and safe to call at any time.
+  function getBookedStayForCity(city){
+    return getStays().find(function(s){return s.city===city&&s.status==="booked";})||null;
+  }
+  function renderHotelChip(i,chipEl){
+    // NIGHTS is declared later via var (hoisting → undefined until that line runs)
+    var nights=(typeof NIGHTS!=="undefined")?NIGHTS:null;
+    var tonightNight=(nights&&nights[i])||null;
+    var lastNight=(nights&&i>0)?nights[i-1]||null:null;
+    // check-out: slept here last night but moving on today (or flying home)
+    var checkoutCity=lastNight&&(!tonightNight||lastNight.city!==tonightNight.city)?lastNight.city:null;
+    // check-in: arriving in a new city tonight
+    var checkinCity=tonightNight&&(!lastNight||lastNight.city!==tonightNight.city)?tonightNight.city:null;
+    // just staying tonight (not a transition)
+    var stayCity=(!checkinCity&&tonightNight)?tonightNight.city:null;
+    chipEl.innerHTML="";
+    var parts=[];
+    function chip(cls,s,tag){if(s&&s.name)parts.push('<div class="hotel-chip '+cls+'"><span class="hc-ico">🏨</span><span class="hc-name">'+esc(s.name)+'</span><span class="hc-divider"></span><span class="hc-tag">'+tag+'</span></div>');}
+    if(checkoutCity)chip("hc-out",getBookedStayForCity(checkoutCity),"Check out");
+    if(checkinCity)chip("hc-in",getBookedStayForCity(checkinCity),"Check in");
+    if(stayCity)chip("hc-stay",getBookedStayForCity(stayCity),"Tonight");
+    chipEl.innerHTML=parts.join("");
+  }
+  function renderAllHotelChips(){CHIP_ELS.forEach(function(el,i){if(el)renderHotelChip(i,el);});}
   var BADGES=[{v:"",t:"— no tag"},{v:"travel",t:"Train"},{v:"book",t:"Book ahead"},{v:"kid",t:"Kid pick"}];
   function badgeLabel(b){return b==="travel"?"train":b==="book"?"book ahead":b==="kid"?"kid pick":"";}
   var root=document.getElementById("itinerary");
@@ -990,6 +1031,7 @@
     title.appendChild(editBtn);
     body.appendChild(title);
     if(d.sub)body.appendChild(el("div","dsub",d.sub));
+    var chipEl=el("div","hotel-chips");CHIP_ELS[i]=chipEl;renderHotelChip(i,chipEl);body.appendChild(chipEl);
     renderDayItems(i,box);
     body.appendChild(box);
     if(d.tips&&d.tips.length){var tips=el("div","tips");d.tips.forEach(function(t){tips.appendChild(el("div","tip",'<span class="ic">◆</span><span>'+t+'</span>'));});body.appendChild(tips);}
@@ -1419,7 +1461,7 @@
     }catch(e){return "";}
   }
   var STAYS=getStays();
-  function persist(rerender){setStays(STAYS);renderCoverage();if(rerender){renderStays();if(typeof refreshHotelMarkers==="function")refreshHotelMarkers();}}
+  function persist(rerender){setStays(STAYS);renderCoverage();if(rerender){renderStays();if(typeof refreshHotelMarkers==="function")refreshHotelMarkers();}renderAllHotelChips();}
   function cityBooked(k){return STAYS.some(function(s){return s.city===k&&s.status==="booked";});}
   function locateStay(s,cb){
     geocode((s.name||"")+" "+(CITIES[s.city]?CITIES[s.city].name:"")+" Japan",function(hit){
