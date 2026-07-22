@@ -700,7 +700,7 @@
   <footer>
     <div class="jp">よい旅を</div>
     <div>Have a wonderful trip. · Everything you tick, note, or pin is saved in this browser only.</div>
-    <div style="margin-top:8px;font-size:11px;opacity:0.5">v1.0</div>
+    <div style="margin-top:8px;font-size:11px;opacity:0.5">v1.1</div>
   </footer>
 </div>
 
@@ -1803,15 +1803,20 @@
         fetch(u).then(function(r){return r.ok?r.json():null;}).then(function(j){
           if(j&&j.data){
             var localV=s.localV(),remoteV=(j.v)||0;
-            // take remote when it's a newer version, OR the same version but genuinely different
-            // content — the tie-break reconciles two devices that wrote the same version at once.
-            if(remoteV>localV || (remoteV===localV && s.normalize(j.data)!==s.normalize(s.collect()))){
+            // Only a genuinely NEWER remote version wins and triggers a reload. We must never reload
+            // on a same-version content difference: the app regenerates some keys on load (itinerary
+            // migration, default lists, etc.) so collect() rarely byte-matches the stored copy — that
+            // would reload → regenerate → differ → reload forever.
+            if(remoteV>localV){
               s.applying=true;
               Object.keys(j.data).forEach(function(k){if(isOurs(k)){try{localStorage.setItem(k,j.data[k]);}catch(e){}}});
-              try{localStorage.setItem("syncV",String(Math.max(remoteV,localV)));}catch(e){}
+              try{localStorage.setItem("syncV",String(remoteV));}catch(e){}
               s.applying=false;setStatus("synced ✓","ok");cb&&cb(true,"remote");
-            }else if(localV>remoteV){s.push();cb&&cb(true,"local");}
-            else{setStatus("synced ✓","ok");cb&&cb(true,"same");}
+            }else if(localV>remoteV || s.normalize(j.data)!==s.normalize(s.collect())){
+              // We're ahead, or the same version but our content differs — heal by pushing local up
+              // to a new version. Converges in one push (no reload loop) and merges local-only keys.
+              s.push();cb&&cb(true,"local");
+            }else{setStatus("synced ✓","ok");cb&&cb(true,"same");}
           }else{s.push();cb&&cb(true,"new");}
         }).catch(function(){setStatus("couldn't reach the database","warn");cb&&cb(false);});
       });

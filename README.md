@@ -4,8 +4,7 @@ A clean, editable single-page itinerary for our Sep 4–15, 2026 trip (Tokyo · 
 with an OpenStreetMap view, a booking checklist, per-day notes, backup export/import, and
 optional cloud sync across devices.
 
-**`index.html`** is the whole app — one self-contained file. `japan-itinerary.html` is the
-same content without the page wrapper (used for the claude.ai preview); you can ignore it.
+**`index.html`** is the whole app — one self-contained file.
 
 ## Deploy (GitHub Pages)
 
