@@ -281,6 +281,26 @@
   .info h4 .d{width:8px;height:8px;border-radius:50%;background:var(--accent)}
   .info p{margin:0;font-size:13px;color:var(--ink-soft);line-height:1.5}
 
+  /* ---- before-you-go editing ---- */
+  .byg-head{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
+  .byg-head h2{margin-bottom:0}
+  .byg-edit-btn{margin-left:auto;flex:none;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-soft);font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:5px 12px;border-radius:7px;cursor:pointer}
+  .byg-edit-btn:hover{color:var(--accent);border-color:var(--accent)}
+  .byg-edit-rows{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .byg-item-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:8px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px}
+  .byg-item-fields{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .byg-field{background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:var(--sans);font-size:13.5px;padding:8px 9px;width:100%;box-sizing:border-box}
+  .byg-field:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+  .byg-del{border:0;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:15px;padding:2px 4px;align-self:start;line-height:1}
+  .byg-del:hover{color:var(--osaka)}
+  .byg-tools{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:4px}
+  .byg-add{border:1px dashed var(--line-strong);background:transparent;color:var(--accent);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans)}
+  .byg-add:hover{background:var(--accent-soft)}
+  .byg-reset{border:0;background:transparent;color:var(--ink-faint);font-size:12.5px;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+  .byg-reset:hover{color:var(--ink-soft)}
+  .byg-fact-body{resize:vertical;min-height:60px}
+  .byg-edit-sep{border:0;border-top:1px solid var(--line);margin:18px 0 14px}
+
   /* ---- places ---- */
   .maprow{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
   .maprow input[type=url]{
@@ -584,16 +604,10 @@
 
   <section class="block">
     <div class="panel">
-      <h2>Before you go — booking checklist</h2>
+      <div class="byg-head"><h2>Before you go — booking checklist</h2><button class="byg-edit-btn" id="bygEditBtn" type="button">Edit</button></div>
       <p class="sub">The things that sell out or need a dated ticket. Tick them as you lock them in.</p>
       <div class="checks" id="checks"></div>
-
-      <div class="facts-grid">
-        <div class="info"><h4><span class="d"></span>Getting around</h4><p>Grab <strong>Suica / ICOCA</strong> IC cards (or add Suica to Apple/Google Wallet) and tap onto everything. Google Maps transit directions are gospel here.</p></div>
-        <div class="info"><h4><span class="d"></span>Bullet trains</h4><p>A JR Pass rarely pays off for this trip — book <strong>point-to-point Nozomi</strong> tickets and reserve seats. Buy an <em>ekiben</em> bento for the ride.</p></div>
-        <div class="info"><h4><span class="d"></span>Money</h4><p>Carry some cash; many small spots are cash-only. <strong>7-Bank ATMs</strong> in every konbini take foreign cards.</p></div>
-        <div class="info"><h4><span class="d"></span>Travelling with a 9-yo</h4><p>One big thing + one calm thing per day. Forward luggage city-to-city with <strong>takkyubin</strong> so no one drags suitcases up station stairs.</p></div>
-      </div>
+      <div class="facts-grid" id="factsGrid"></div>
     </div>
   </section>
 
@@ -1066,17 +1080,88 @@
     if(card){card.scrollIntoView({behavior:"smooth",block:"center"});card.classList.remove("flash");void card.offsetWidth;card.classList.add("flash");}
   }
 
-  // ---- prep checklist ----
-  var checks=document.getElementById("checks");
-  PREP.forEach(function(p,i){
-    var key="prep:"+i;
-    var lab=el("label","check");
-    var box=el("input");box.type="checkbox";box.className="box";box.checked=LS.get(key)==="1";
-    box.addEventListener("change",function(){if(box.checked)LS.set(key,"1");else LS.del(key);});
-    var l=el("span","lab",'<span class="t">'+p[0]+'</span><span class="d">'+p[1]+'</span>');
-    lab.appendChild(box);lab.appendChild(l);
-    checks.appendChild(lab);
+  // ---- before you go — editable checklist + tips ----
+  var FACTS_DEFAULT=[
+    {title:"Getting around",body:"Grab <strong>Suica / ICOCA</strong> IC cards (or add Suica to Apple/Google Wallet) and tap onto everything. Google Maps transit directions are gospel here."},
+    {title:"Bullet trains",body:"A JR Pass rarely pays off for this trip — book <strong>point-to-point Nozomi</strong> tickets and reserve seats. Buy an <em>ekiben</em> bento for the ride."},
+    {title:"Money",body:"Carry some cash; many small spots are cash-only. <strong>7-Bank ATMs</strong> in every konbini take foreign cards."},
+    {title:"Travelling with a 9-yo",body:"One big thing + one calm thing per day. Forward luggage city-to-city with <strong>takkyubin</strong> so no one drags suitcases up station stairs."}
+  ];
+  function getBYGItems(){try{var a=JSON.parse(LS.get("byg_items",""));if(Array.isArray(a))return a;}catch(e){}return PREP.map(function(p){return{title:p[0],desc:p[1]};});}
+  function getBYGFacts(){try{var a=JSON.parse(LS.get("byg_facts",""));if(Array.isArray(a))return a;}catch(e){}return FACTS_DEFAULT.map(function(f){return{title:f.title,body:f.body};});}
+  function saveBYGItems(a){LS.set("byg_items",JSON.stringify(a));}
+  function saveBYGFacts(a){LS.set("byg_facts",JSON.stringify(a));}
+  var bygEditing=false;
+  function renderBYG(){
+    var checksEl=document.getElementById("checks");
+    var factsEl=document.getElementById("factsGrid");
+    if(!checksEl||!factsEl)return;
+    checksEl.innerHTML="";factsEl.innerHTML="";
+    var items=getBYGItems(),facts=getBYGFacts();
+    if(!bygEditing){
+      items.forEach(function(p,i){
+        var key="prep:"+i;
+        var lab=el("label","check");
+        var box=el("input");box.type="checkbox";box.className="box";box.checked=LS.get(key)==="1";
+        box.addEventListener("change",function(){if(box.checked)LS.set(key,"1");else LS.del(key);});
+        var l=el("span","lab",'<span class="t">'+esc(p.title)+'</span>'+(p.desc?'<span class="d">'+esc(p.desc)+'</span>':''));
+        lab.appendChild(box);lab.appendChild(l);checksEl.appendChild(lab);
+      });
+      facts.forEach(function(f){
+        var div=el("div","info");
+        div.innerHTML='<h4><span class="d"></span>'+esc(f.title)+'</h4><p>'+f.body+'</p>';
+        factsEl.appendChild(div);
+      });
+    }else{
+      var rows=el("div","byg-edit-rows");
+      items.forEach(function(p,i){
+        var row=el("div","byg-item-row");
+        var fields=el("div","byg-item-fields");
+        var tin=el("input","byg-field");tin.type="text";tin.value=p.title||"";tin.placeholder="Item title";
+        tin.addEventListener("input",function(){p.title=tin.value;saveBYGItems(items);});
+        var din=el("input","byg-field");din.type="text";din.value=p.desc||"";din.placeholder="Description (optional)";
+        din.addEventListener("input",function(){p.desc=din.value;saveBYGItems(items);});
+        fields.appendChild(tin);fields.appendChild(din);
+        var del=el("button","byg-del");del.type="button";del.textContent="✕";del.setAttribute("aria-label","Delete item");
+        (function(idx){del.addEventListener("click",function(){items.splice(idx,1);saveBYGItems(items);renderBYG();});})(i);
+        row.appendChild(fields);row.appendChild(del);rows.appendChild(row);
+      });
+      var tools=el("div","byg-tools");
+      var addBtn=el("button","byg-add");addBtn.type="button";addBtn.textContent="+ Add item";
+      addBtn.addEventListener("click",function(){items.push({title:"",desc:""});saveBYGItems(items);renderBYG();});
+      var rstBtn=el("button","byg-reset");rstBtn.type="button";rstBtn.textContent="Reset checklist to defaults";
+      rstBtn.addEventListener("click",function(){if(confirm("Reset the booking checklist to the original suggestions?")){LS.del("byg_items");renderBYG();}});
+      tools.appendChild(addBtn);tools.appendChild(rstBtn);
+      checksEl.appendChild(rows);checksEl.appendChild(tools);
+
+      var sep=el("hr","byg-edit-sep");factsEl.appendChild(sep);
+      var frows=el("div","byg-edit-rows");
+      facts.forEach(function(f,i){
+        var row=el("div","byg-item-row");
+        var fields=el("div","byg-item-fields");
+        var tin=el("input","byg-field");tin.type="text";tin.value=f.title||"";tin.placeholder="Tile title";
+        tin.addEventListener("input",function(){f.title=tin.value;saveBYGFacts(facts);});
+        var ba=el("textarea","byg-field byg-fact-body");ba.value=f.body||"";ba.placeholder="Content (plain text or basic HTML)";
+        ba.addEventListener("input",function(){f.body=ba.value;saveBYGFacts(facts);});
+        fields.appendChild(tin);fields.appendChild(ba);
+        var del=el("button","byg-del");del.type="button";del.textContent="✕";del.setAttribute("aria-label","Delete tile");
+        (function(idx){del.addEventListener("click",function(){facts.splice(idx,1);saveBYGFacts(facts);renderBYG();});})(i);
+        row.appendChild(fields);row.appendChild(del);frows.appendChild(row);
+      });
+      var ftools=el("div","byg-tools");
+      var faddBtn=el("button","byg-add");faddBtn.type="button";faddBtn.textContent="+ Add tip tile";
+      faddBtn.addEventListener("click",function(){facts.push({title:"",body:""});saveBYGFacts(facts);renderBYG();});
+      var frstBtn=el("button","byg-reset");frstBtn.type="button";frstBtn.textContent="Reset tips to defaults";
+      frstBtn.addEventListener("click",function(){if(confirm("Reset the tips section to the original content?")){LS.del("byg_facts");renderBYG();}});
+      ftools.appendChild(faddBtn);ftools.appendChild(frstBtn);
+      factsEl.appendChild(frows);factsEl.appendChild(ftools);
+    }
+  }
+  var bygEditBtn=document.getElementById("bygEditBtn");
+  bygEditBtn.addEventListener("click",function(){
+    bygEditing=!bygEditing;bygEditBtn.textContent=bygEditing?"Done":"Edit";renderBYG();
   });
+  renderBYG();
 
   // ---- countdown ----
   (function(){
@@ -1411,7 +1496,7 @@
   initCitySpine();
 
   // ---- backup: export / import ----
-  var PREFIX=["chk:","note:","prep:","mapUrl","pins","theme","stays","itin"];
+  var PREFIX=["chk:","note:","prep:","mapUrl","pins","theme","stays","itin","byg_items","byg_facts"];
   function isOurs(k){return PREFIX.some(function(p){return k===p||k.indexOf(p)===0;});}
   function exportData(){
     var data={};
