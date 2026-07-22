@@ -704,7 +704,7 @@
   <footer>
     <div class="jp">よい旅を</div>
     <div>Have a wonderful trip. · Everything you tick, note, or pin is saved in this browser only.</div>
-    <div style="margin-top:8px;font-size:11px;opacity:0.5">v1.4</div>
+    <div style="margin-top:8px;font-size:11px;opacity:0.5">v1.5</div>
   </footer>
 </div>
 
@@ -1807,6 +1807,9 @@
   });
   var suEl=document.getElementById("stayUrl");if(suEl&&sa)suEl.addEventListener("keydown",function(ev){if(ev.key==="Enter")sa.click();});
   renderStays();renderCoverage();if(typeof refreshHotelMarkers==="function")refreshHotelMarkers();
+  // the itinerary renders before NIGHTS is defined (var-hoisting), so the hotel chips came up
+  // empty on first paint — re-render them now that NIGHTS exists.
+  renderAllHotelChips();
 
   // ---- cloud sync via Firebase (Google sign-in + Realtime Database REST) ----
   // ONE-TIME SETUP in the Firebase console (https://console.firebase.google.com):
