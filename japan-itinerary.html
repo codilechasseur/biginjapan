@@ -890,8 +890,10 @@
   function loadItin(){
     var raw=LS.get("itin","");
     if(raw){try{var a=JSON.parse(raw);if(Array.isArray(a)&&a.length===DAYS.length){
-      // migrate old single-note string format to notes array
-      a.forEach(function(day){day.forEach(function(it){if(!Array.isArray(it.notes)){it.notes=it.note?[it.note]:[];delete it.note;}});});
+      // migrate old single-note string format to notes array (once; re-saved below)
+      var migrated=false;
+      a.forEach(function(day){day.forEach(function(it){if(!Array.isArray(it.notes)){it.notes=it.note?[it.note]:[];delete it.note;migrated=true;}});});
+      if(migrated)LS.set("itin",JSON.stringify(a));
       return a;
     }}catch(e){}}
     return seedItin();
@@ -990,14 +992,13 @@
     var tin=el("input","ie-time");tin.type="text";tin.value=it.time||"";tin.placeholder="09:00";tin.addEventListener("input",function(){it.time=tin.value;saveItin();});
     var fields=el("div","ie-fields");
     var txt=el("input","ie-txt");txt.type="text";txt.value=it.txt||"";txt.placeholder="What are we doing?";txt.addEventListener("input",function(){it.txt=txt.value;saveItin();});
-    if(!Array.isArray(it.notes))it.notes=it.note?[it.note]:[];
     var notesWrap=el("div","ie-notes");
     function buildNoteRow(k){
       var nr=el("div","ie-note-row");
       var ni=el("input");ni.type="text";ni.value=it.notes[k]||"";ni.placeholder="Note (optional)";
       (function(k){ni.addEventListener("input",function(){it.notes[k]=ni.value;saveItin();});})(k);
       var nd=el("button","ie-note-del");nd.type="button";nd.textContent="✕";nd.setAttribute("aria-label","Remove note");
-      (function(k){nd.addEventListener("click",function(){it.notes.splice(k,1);saveItin();notesWrap.innerHTML="";it.notes.forEach(function(_,k2){notesWrap.appendChild(buildNoteRow(k2));});notesWrap.appendChild(addNoteBtn);});})(k);
+      (function(k,nr){nd.addEventListener("click",function(){it.notes.splice(k,1);saveItin();nr.parentNode.removeChild(nr);});})(k,nr);
       nr.appendChild(ni);nr.appendChild(nd);
       return nr;
     }
@@ -1049,6 +1050,7 @@
     var box=el("div","items-box");
     editBtn.addEventListener("click",function(){
       EDITING[i]=!EDITING[i];
+      if(!EDITING[i])ITIN[i].forEach(function(it){if(Array.isArray(it.notes))it.notes=it.notes.filter(Boolean);});
       editBtn.textContent=EDITING[i]?"Done":"Edit";
       card.classList.toggle("editing",!!EDITING[i]);
       renderDayItems(i,box);
