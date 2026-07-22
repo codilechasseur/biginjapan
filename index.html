@@ -1059,8 +1059,8 @@
     {title:"Money",body:"Carry some cash; many small spots are cash-only. <strong>7-Bank ATMs</strong> in every konbini take foreign cards."},
     {title:"Travelling with a 9-yo",body:"One big thing + one calm thing per day. Forward luggage city-to-city with <strong>takkyubin</strong> so no one drags suitcases up station stairs."}
   ];
-  function getBYGItems(){try{var a=JSON.parse(LS.get("byg_items",""));if(Array.isArray(a))return a;}catch(e){}return PREP.map(function(p){return{title:p[0],desc:p[1]};});}
-  function getBYGFacts(){try{var a=JSON.parse(LS.get("byg_facts",""));if(Array.isArray(a))return a;}catch(e){}return FACTS_DEFAULT.map(function(f){return{title:f.title,body:f.body};});}
+  function getBYGItems(){var r=LS.get("byg_items","");if(!r)return PREP.map(function(p){return{title:p[0],desc:p[1]};});try{var a=JSON.parse(r);if(Array.isArray(a))return a;}catch(e){}return PREP.map(function(p){return{title:p[0],desc:p[1]};});}
+  function getBYGFacts(){var r=LS.get("byg_facts","");if(!r)return FACTS_DEFAULT.map(function(f){return{title:f.title,body:f.body};});try{var a=JSON.parse(r);if(Array.isArray(a))return a;}catch(e){}return FACTS_DEFAULT.map(function(f){return{title:f.title,body:f.body};});}
   function saveBYGItems(a){LS.set("byg_items",JSON.stringify(a));}
   function saveBYGFacts(a){LS.set("byg_facts",JSON.stringify(a));}
   var bygEditing=false;
@@ -1113,7 +1113,7 @@
         var fields=el("div","byg-item-fields");
         var tin=el("input","byg-field");tin.type="text";tin.value=f.title||"";tin.placeholder="Tile title";
         tin.addEventListener("input",function(){f.title=tin.value;saveBYGFacts(facts);});
-        var ba=el("textarea","byg-field byg-fact-body");ba.value=f.body||"";ba.placeholder="Content (plain text or basic HTML)";
+        var ba=el("textarea","byg-field byg-fact-body");ba.value=f.body||"";ba.placeholder="Content — plain text, or HTML tags like <strong> and <em>";
         ba.addEventListener("input",function(){f.body=ba.value;saveBYGFacts(facts);});
         fields.appendChild(tin);fields.appendChild(ba);
         var del=el("button","byg-del");del.type="button";del.textContent="✕";del.setAttribute("aria-label","Delete tile");
