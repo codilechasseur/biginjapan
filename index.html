@@ -292,6 +292,9 @@
   label.check .lab .t{font-weight:500}
   label.check .lab .d{display:block;color:var(--ink-faint);font-size:12.5px}
   label.check:has(.box:checked) .lab .t{color:var(--ink-faint);text-decoration:line-through}
+  label.check .lab .meta{display:flex;flex-wrap:wrap;gap:3px 12px;margin-top:4px;font-size:12px}
+  label.check .lab .meta span{color:var(--ink-soft);white-space:nowrap}
+  label.check .lab .meta .m-conf{font-family:var(--mono);font-size:11.5px}
 
   .facts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:22px}
   .info{background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:15px 16px}
@@ -309,6 +312,8 @@
   .byg-item-fields{display:flex;flex-direction:column;gap:6px;min-width:0}
   .byg-field{background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:var(--sans);font-size:13.5px;padding:8px 9px;width:100%;box-sizing:border-box}
   .byg-field:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+  .byg-item-extra{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+  @media(max-width:560px){.byg-item-extra{grid-template-columns:1fr}}
   .byg-del{border:0;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:15px;padding:2px 4px;align-self:start;line-height:1}
   .byg-del:hover{color:var(--osaka)}
   .byg-tools{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:4px}
@@ -629,7 +634,7 @@
   <section class="block">
     <div class="panel">
       <div class="byg-head"><h2>Before you go — booking checklist</h2><button class="byg-edit-btn" id="bygEditBtn" type="button">Edit</button></div>
-      <p class="sub">The things that sell out or need a dated ticket. Tick them as you lock them in.</p>
+      <p class="sub">The things that sell out or need a dated ticket. Tick each one as you book it — and tap <strong>Edit</strong> to save its date, confirmation number, and cost so it's all in one place for the trip.</p>
       <div class="checks" id="checks"></div>
       <div class="facts-grid" id="factsGrid"></div>
     </div>
@@ -700,7 +705,7 @@
   <footer>
     <div class="jp">よい旅を</div>
     <div>Have a wonderful trip. · Everything you tick, note, or pin is saved in this browser only.</div>
-    <div style="margin-top:8px;font-size:11px;opacity:0.5">v1.1</div>
+    <div style="margin-top:8px;font-size:11px;opacity:0.5">v1.2</div>
   </footer>
 </div>
 
@@ -838,6 +843,7 @@
     ["teamLab Planets","timed entry — sells out"],
     ["Baseball tickets","check home schedule for your dates"],
     ["Shinkansen reservations","Tokyo→Osaka, Kyoto⇄Hiroshima, Kyoto→Tokyo"],
+    ["Restaurant reservations","any sit-down dinners you want to lock in"],
     ["3 hotels","Tokyo · Osaka · Kyoto"],
     ["Narita transfer","N'EX / Skyliner in, N'EX out"],
     ["Pocket wifi or eSIM","order before you fly"],
@@ -1153,7 +1159,11 @@
         var lab=el("label","check");
         var box=el("input");box.type="checkbox";box.className="box";box.checked=LS.get(key)==="1";
         box.addEventListener("change",function(){if(box.checked)LS.set(key,"1");else LS.del(key);});
-        var l=el("span","lab",'<span class="t">'+esc(p.title)+'</span>'+(p.desc?'<span class="d">'+esc(p.desc)+'</span>':''));
+        var meta="";
+        if(p.when)meta+='<span class="m-when">📅 '+esc(p.when)+'</span>';
+        if(p.conf)meta+='<span class="m-conf">🎟 '+esc(p.conf)+'</span>';
+        if(p.cost)meta+='<span class="m-cost">💴 '+esc(p.cost)+'</span>';
+        var l=el("span","lab",'<span class="t">'+esc(p.title)+'</span>'+(p.desc?'<span class="d">'+esc(p.desc)+'</span>':'')+(meta?'<span class="meta">'+meta+'</span>':''));
         lab.appendChild(box);lab.appendChild(l);checksEl.appendChild(lab);
       });
       facts.forEach(function(f){
@@ -1170,7 +1180,15 @@
         tin.addEventListener("input",function(){p.title=tin.value;saveBYGItems(items);});
         var din=el("input","byg-field");din.type="text";din.value=p.desc||"";din.placeholder="Description (optional)";
         din.addEventListener("input",function(){p.desc=din.value;saveBYGItems(items);});
-        fields.appendChild(tin);fields.appendChild(din);
+        var extra=el("div","byg-item-extra");
+        var win=el("input","byg-field");win.type="text";win.value=p.when||"";win.placeholder="Date / time";
+        win.addEventListener("input",function(){p.when=win.value;saveBYGItems(items);});
+        var cin=el("input","byg-field");cin.type="text";cin.value=p.conf||"";cin.placeholder="Confirmation #";
+        cin.addEventListener("input",function(){p.conf=cin.value;saveBYGItems(items);});
+        var pin=el("input","byg-field");pin.type="text";pin.value=p.cost||"";pin.placeholder="Cost";
+        pin.addEventListener("input",function(){p.cost=pin.value;saveBYGItems(items);});
+        extra.appendChild(win);extra.appendChild(cin);extra.appendChild(pin);
+        fields.appendChild(tin);fields.appendChild(din);fields.appendChild(extra);
         var del=el("button","byg-del");del.type="button";del.textContent="✕";del.setAttribute("aria-label","Delete item");
         (function(idx){del.addEventListener("click",function(){items.splice(idx,1);saveBYGItems(items);renderBYG();});})(i);
         row.appendChild(fields);row.appendChild(del);rows.appendChild(row);
