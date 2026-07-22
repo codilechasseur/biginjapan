@@ -201,6 +201,9 @@
   .what .txt{font-weight:500}
   .what .note{display:block;color:var(--ink-soft);font-size:13px;font-weight:400;margin-top:1px}
   li.item.done .what .txt,li.item.done .time{text-decoration:line-through;color:var(--ink-faint);text-decoration-thickness:1px}
+  .item-map-link{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--accent);text-decoration:none;margin-top:2px;font-weight:500}
+  .item-map-link:hover{text-decoration:underline;text-underline-offset:2px}
+  li.item.done .item-map-link{opacity:.45}
   .badge{
     display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
     padding:1px 6px;border-radius:5px;margin-left:8px;vertical-align:1px;border:1px solid transparent;white-space:nowrap;
@@ -876,7 +879,7 @@
   function seedItin(){
     return DAYS.map(function(d,i){
       return d.items.map(function(it,j){
-        return {id:"d"+i+"i"+j,time:it.time,txt:it.txt,note:it.note||"",badge:it.badge||"",geo:(GEO[i+":"+j]||null),done:LS.get("chk:"+i+":"+j)==="1"};
+        return {id:"d"+i+"i"+j,time:it.time,txt:it.txt,note:it.note||"",badge:it.badge||"",mapUrl:"",geo:(GEO[i+":"+j]||null),done:LS.get("chk:"+i+":"+j)==="1"};
       });
     });
   }
@@ -927,7 +930,9 @@
     btn.setAttribute("aria-label","Mark done: "+String(it.txt||"").replace(/"/g,""));
     btn.addEventListener("click",function(){it.done=!it.done;li.classList.toggle("done",it.done);btn.setAttribute("aria-pressed",it.done?"true":"false");saveItin();});
     var badge=it.badge?' <span class="badge '+it.badge+'">'+badgeLabel(it.badge)+'</span>':'';
-    var what=el("div","what",'<span class="txt">'+esc(it.txt)+'</span>'+badge+(it.note?'<span class="note">'+esc(it.note)+'</span>':''));
+    var safeMapUrl=(it.mapUrl&&/^https?:\/\//i.test(it.mapUrl))?it.mapUrl:null;
+    var mapLink=safeMapUrl?'<a class="item-map-link" href="'+esc(safeMapUrl)+'" target="_blank" rel="noopener">🗺️ Maps</a>':'';
+    var what=el("div","what",'<span class="txt">'+esc(it.txt)+'</span>'+badge+(it.note?'<span class="note">'+esc(it.note)+'</span>':'')+mapLink);
     li.appendChild(btn);li.appendChild(el("div","time",esc(it.time)));li.appendChild(what);
   }
   function focusGrip(id){var g=document.querySelector('.item-edit[data-id="'+id+'"] .ie-grip');if(g)g.focus();}
@@ -979,10 +984,11 @@
     var fields=el("div","ie-fields");
     var txt=el("input","ie-txt");txt.type="text";txt.value=it.txt||"";txt.placeholder="What are we doing?";txt.addEventListener("input",function(){it.txt=txt.value;saveItin();});
     var note=el("input","ie-note");note.type="text";note.value=it.note||"";note.placeholder="Note (optional)";note.addEventListener("input",function(){it.note=note.value;saveItin();});
+    var mapurlIn=el("input");mapurlIn.type="text";mapurlIn.value=it.mapUrl||"";mapurlIn.placeholder="Google Maps link (optional — paste a share URL)";mapurlIn.addEventListener("input",function(){it.mapUrl=mapurlIn.value.trim();saveItin();});
     var bsel=el("select","ie-badge");
     BADGES.forEach(function(b){var o=el("option");o.value=b.v;o.textContent=b.t;if((it.badge||"")===b.v)o.selected=true;bsel.appendChild(o);});
     bsel.addEventListener("change",function(){it.badge=bsel.value;saveItin();});
-    fields.appendChild(txt);fields.appendChild(note);fields.appendChild(bsel);
+    fields.appendChild(txt);fields.appendChild(note);fields.appendChild(mapurlIn);fields.appendChild(bsel);
     var del=el("button","ie-del");del.type="button";del.textContent="✕";del.setAttribute("aria-label","Delete activity");
     del.addEventListener("click",function(){items.splice(j,1);saveItin();redraw();});
     row.appendChild(mv);row.appendChild(tin);row.appendChild(fields);row.appendChild(del);
@@ -998,7 +1004,7 @@
       enableDrag(rowsC,items,redraw);
       wrap.appendChild(rowsC);
       var add=el("button","add-item");add.type="button";add.textContent="+ Add activity";
-      add.addEventListener("click",function(){items.push({id:"n"+Date.now()+"-"+Math.floor(Math.random()*1000),time:"",txt:"",note:"",badge:"",geo:null,done:false});saveItin();redraw();});
+      add.addEventListener("click",function(){items.push({id:"n"+Date.now()+"-"+Math.floor(Math.random()*1000),time:"",txt:"",note:"",badge:"",mapUrl:"",geo:null,done:false});saveItin();redraw();});
       var reset=el("button","reset-day");reset.type="button";reset.textContent="Reset to suggestions";
       reset.addEventListener("click",function(){if(confirm("Replace this day's activities with the original suggestions?")){ITIN[i]=seedItin()[i];saveItin();redraw();}});
       var tools=el("div","ie-tools");tools.appendChild(add);tools.appendChild(reset);
@@ -1057,7 +1063,7 @@
     });
   })();
   function addToDay(i,place){
-    ITIN[i].push({id:"p"+Date.now()+"-"+Math.floor(Math.random()*1000),time:"",txt:place.name||"Place",note:"",badge:"",geo:(place.lat!=null&&!isNaN(place.lat))?[place.lat,place.lng]:null,done:false});
+    ITIN[i].push({id:"p"+Date.now()+"-"+Math.floor(Math.random()*1000),time:"",txt:place.name||"Place",note:"",badge:"",mapUrl:"",geo:(place.lat!=null&&!isNaN(place.lat))?[place.lat,place.lng]:null,done:false});
     saveItin();
     var box=document.querySelector("#day-"+i+" .items-box");
     if(box)renderDayItems(i,box);
