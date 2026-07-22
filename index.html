@@ -209,6 +209,9 @@
   .what .txt{font-weight:500}
   .what .note{display:block;color:var(--ink-soft);font-size:13px;font-weight:400;margin-top:1px}
   li.item.done .what .txt,li.item.done .time{text-decoration:line-through;color:var(--ink-faint);text-decoration-thickness:1px}
+  .item-map-link{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--accent);text-decoration:none;margin-top:2px;font-weight:500}
+  .item-map-link:hover{text-decoration:underline;text-underline-offset:2px}
+  li.item.done .item-map-link{opacity:.45}
   .badge{
     display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
     padding:1px 6px;border-radius:5px;margin-left:8px;vertical-align:1px;border:1px solid transparent;white-space:nowrap;
@@ -264,6 +267,13 @@
   .ie-grip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .item-edit.ie-dragging{opacity:.92;box-shadow:var(--shadow);background:var(--surface);cursor:grabbing;user-select:none}
   .item-edit.ie-dragging .ie-grip{cursor:grabbing;border-color:var(--accent);color:var(--accent)}
+  .ie-notes{display:flex;flex-direction:column;gap:4px}
+  .ie-note-row{display:flex;gap:4px;align-items:center}
+  .ie-note-row input{flex:1}
+  .ie-note-del{border:0;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:13px;padding:2px 4px;line-height:1;flex-shrink:0}
+  .ie-note-del:hover{color:var(--osaka)}
+  .ie-add-note{border:0;background:transparent;color:var(--accent);font-size:12px;font-family:var(--sans);cursor:pointer;padding:2px 0;text-decoration:underline;text-underline-offset:2px;align-self:flex-start}
+  .ie-add-note:hover{color:var(--accent)}
 
   /* ---- prep / checklist ---- */
   .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow)}
@@ -288,6 +298,26 @@
   .info h4{font-size:13px;margin:0 0 6px;display:flex;align-items:center;gap:7px}
   .info h4 .d{width:8px;height:8px;border-radius:50%;background:var(--accent)}
   .info p{margin:0;font-size:13px;color:var(--ink-soft);line-height:1.5}
+
+  /* ---- before-you-go editing ---- */
+  .byg-head{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
+  .byg-head h2{margin-bottom:0}
+  .byg-edit-btn{margin-left:auto;flex:none;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-soft);font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:5px 12px;border-radius:7px;cursor:pointer}
+  .byg-edit-btn:hover{color:var(--accent);border-color:var(--accent)}
+  .byg-edit-rows{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .byg-item-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:8px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px}
+  .byg-item-fields{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .byg-field{background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:var(--sans);font-size:13.5px;padding:8px 9px;width:100%;box-sizing:border-box}
+  .byg-field:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+  .byg-del{border:0;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:15px;padding:2px 4px;align-self:start;line-height:1}
+  .byg-del:hover{color:var(--osaka)}
+  .byg-tools{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:4px}
+  .byg-add{border:1px dashed var(--line-strong);background:transparent;color:var(--accent);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--sans)}
+  .byg-add:hover{background:var(--accent-soft)}
+  .byg-reset{border:0;background:transparent;color:var(--ink-faint);font-size:12.5px;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+  .byg-reset:hover{color:var(--ink-soft)}
+  .byg-fact-body{resize:vertical;min-height:60px}
+  .byg-edit-sep{border:0;border-top:1px solid var(--line);margin:18px 0 14px}
 
   /* ---- places ---- */
   .maprow{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
@@ -499,6 +529,20 @@
   .hotel-pin{width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--surface);border:2px solid var(--osaka);border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.35)}
   .hotel-pin.booked{border-color:var(--kyoto);box-shadow:0 0 0 3px color-mix(in srgb,var(--kyoto) 35%,transparent),0 1px 4px rgba(0,0,0,.35)}
 
+  /* ---- hotel chips on day cards ---- */
+  .hotel-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+  .hotel-chip{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:5px 10px;font-size:13px;border:1px solid transparent}
+  .hotel-chip.hc-in{background:color-mix(in srgb,var(--kyoto) 11%,var(--surface));border-color:color-mix(in srgb,var(--kyoto) 30%,transparent)}
+  .hotel-chip.hc-stay{background:color-mix(in srgb,var(--osaka) 10%,var(--surface));border-color:color-mix(in srgb,var(--osaka) 28%,transparent)}
+  .hotel-chip.hc-out{background:var(--surface-2);border-color:var(--line)}
+  .hc-ico{font-size:13px;line-height:1}
+  .hc-name{font-weight:600;color:var(--ink)}
+  .hc-divider{width:1px;height:11px;background:var(--line-strong);margin:0 2px;flex:none}
+  .hc-tag{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+  .hotel-chip.hc-in .hc-tag{color:var(--kyoto)}
+  .hotel-chip.hc-stay .hc-tag{color:var(--osaka)}
+  .hotel-chip.hc-out .hc-tag{color:var(--ink-faint)}
+
   @media print{
     .topbar,.theme-btn,.print-btn,.note-wrap,.journey,.maprow,.addrow,.callout .ico,#mapLink,#mapPanel,.backup-row,.day-edit,.import-row,.city-spine{display:none!important}
     body{background:#fff;color:#000;font-size:11px}
@@ -584,16 +628,10 @@
 
   <section class="block">
     <div class="panel">
-      <h2>Before you go — booking checklist</h2>
+      <div class="byg-head"><h2>Before you go — booking checklist</h2><button class="byg-edit-btn" id="bygEditBtn" type="button">Edit</button></div>
       <p class="sub">The things that sell out or need a dated ticket. Tick them as you lock them in.</p>
       <div class="checks" id="checks"></div>
-
-      <div class="facts-grid">
-        <div class="info"><h4><span class="d"></span>Getting around</h4><p>Grab <strong>Suica / ICOCA</strong> IC cards (or add Suica to Apple/Google Wallet) and tap onto everything. Google Maps transit directions are gospel here.</p></div>
-        <div class="info"><h4><span class="d"></span>Bullet trains</h4><p>A JR Pass rarely pays off for this trip — book <strong>point-to-point Nozomi</strong> tickets and reserve seats. Buy an <em>ekiben</em> bento for the ride.</p></div>
-        <div class="info"><h4><span class="d"></span>Money</h4><p>Carry some cash; many small spots are cash-only. <strong>7-Bank ATMs</strong> in every konbini take foreign cards.</p></div>
-        <div class="info"><h4><span class="d"></span>Travelling with a 9-yo</h4><p>One big thing + one calm thing per day. Forward luggage city-to-city with <strong>takkyubin</strong> so no one drags suitcases up station stairs.</p></div>
-      </div>
+      <div class="facts-grid" id="factsGrid"></div>
     </div>
   </section>
 
@@ -662,6 +700,7 @@
   <footer>
     <div class="jp">よい旅を</div>
     <div>Have a wonderful trip. · Everything you tick, note, or pin is saved in this browser only.</div>
+    <div style="margin-top:8px;font-size:11px;opacity:0.5">v1.0</div>
   </footer>
 </div>
 
@@ -876,19 +915,52 @@
   function seedItin(){
     return DAYS.map(function(d,i){
       return d.items.map(function(it,j){
-        return {id:"d"+i+"i"+j,time:it.time,txt:it.txt,note:it.note||"",badge:it.badge||"",geo:(GEO[i+":"+j]||null),done:LS.get("chk:"+i+":"+j)==="1"};
+        return {id:"d"+i+"i"+j,time:it.time,txt:it.txt,notes:it.note?[it.note]:[],badge:it.badge||"",mapUrl:"",geo:(GEO[i+":"+j]||null),done:LS.get("chk:"+i+":"+j)==="1"};
       });
     });
   }
   function loadItin(){
     var raw=LS.get("itin","");
-    if(raw){try{var a=JSON.parse(raw);if(Array.isArray(a)&&a.length===DAYS.length)return a;}catch(e){}}
+    if(raw){try{var a=JSON.parse(raw);if(Array.isArray(a)&&a.length===DAYS.length){
+      // migrate old single-note string format to notes array (once; re-saved below)
+      var migrated=false;
+      a.forEach(function(day){day.forEach(function(it){if(!Array.isArray(it.notes)){it.notes=it.note?[it.note]:[];delete it.note;migrated=true;}});});
+      if(migrated)LS.set("itin",JSON.stringify(a));
+      return a;
+    }}catch(e){}}
     return seedItin();
   }
   var ITIN=loadItin();
   function saveItin(){LS.set("itin",JSON.stringify(ITIN));}
   if(!LS.get("itin",""))saveItin();
   var EDITING={};
+  var CHIP_ELS=[];
+  // hotel-chip helpers — NIGHTS is assigned later in the file (var hoisting leaves it
+  // undefined until execution reaches that line); getStays is a function declaration
+  // so it is fully hoisted and safe to call at any time.
+  function getBookedStayForCity(city){
+    return getStays().find(function(s){return s.city===city&&s.status==="booked";})||null;
+  }
+  function renderHotelChip(i,chipEl){
+    // NIGHTS is declared later via var (hoisting → undefined until that line runs)
+    var nights=(typeof NIGHTS!=="undefined")?NIGHTS:null;
+    var tonightNight=(nights&&nights[i])||null;
+    var lastNight=(nights&&i>0)?nights[i-1]||null:null;
+    // check-out: slept here last night but moving on today (or flying home)
+    var checkoutCity=lastNight&&(!tonightNight||lastNight.city!==tonightNight.city)?lastNight.city:null;
+    // check-in: arriving in a new city tonight
+    var checkinCity=tonightNight&&(!lastNight||lastNight.city!==tonightNight.city)?tonightNight.city:null;
+    // just staying tonight (not a transition)
+    var stayCity=(!checkinCity&&tonightNight)?tonightNight.city:null;
+    chipEl.innerHTML="";
+    var parts=[];
+    function chip(cls,s,tag){if(s&&s.name)parts.push('<div class="hotel-chip '+cls+'"><span class="hc-ico">🏨</span><span class="hc-name">'+esc(s.name)+'</span><span class="hc-divider"></span><span class="hc-tag">'+tag+'</span></div>');}
+    if(checkoutCity)chip("hc-out",getBookedStayForCity(checkoutCity),"Check out");
+    if(checkinCity)chip("hc-in",getBookedStayForCity(checkinCity),"Check in");
+    if(stayCity)chip("hc-stay",getBookedStayForCity(stayCity),"Tonight");
+    chipEl.innerHTML=parts.join("");
+  }
+  function renderAllHotelChips(){CHIP_ELS.forEach(function(el,i){if(el)renderHotelChip(i,el);});}
   var BADGES=[{v:"",t:"— no tag"},{v:"travel",t:"Train"},{v:"book",t:"Book ahead"},{v:"kid",t:"Kid pick"}];
   function badgeLabel(b){return b==="travel"?"train":b==="book"?"book ahead":b==="kid"?"kid pick":"";}
   var root=document.getElementById("itinerary");
@@ -900,7 +972,10 @@
     btn.setAttribute("aria-label","Mark done: "+String(it.txt||"").replace(/"/g,""));
     btn.addEventListener("click",function(){it.done=!it.done;li.classList.toggle("done",it.done);btn.setAttribute("aria-pressed",it.done?"true":"false");saveItin();});
     var badge=it.badge?' <span class="badge '+it.badge+'">'+badgeLabel(it.badge)+'</span>':'';
-    var what=el("div","what",'<span class="txt">'+esc(it.txt)+'</span>'+badge+(it.note?'<span class="note">'+esc(it.note)+'</span>':''));
+    var notesHtml=(it.notes||[]).filter(Boolean).map(function(n){return '<span class="note">'+esc(n)+'</span>';}).join("");
+    var safeMapUrl=(it.mapUrl&&/^https?:\/\//i.test(it.mapUrl))?it.mapUrl:null;
+    var mapLink=safeMapUrl?'<a class="item-map-link" href="'+esc(safeMapUrl)+'" target="_blank" rel="noopener">🗺️ Maps</a>':'';
+    var what=el("div","what",'<span class="txt">'+esc(it.txt)+'</span>'+badge+notesHtml+mapLink);
     li.appendChild(btn);li.appendChild(el("div","time",esc(it.time)));li.appendChild(what);
   }
   function focusGrip(id){var g=document.querySelector('.item-edit[data-id="'+id+'"] .ie-grip');if(g)g.focus();}
@@ -951,11 +1026,25 @@
     var tin=el("input","ie-time");tin.type="text";tin.value=it.time||"";tin.placeholder="09:00";tin.addEventListener("input",function(){it.time=tin.value;saveItin();});
     var fields=el("div","ie-fields");
     var txt=el("input","ie-txt");txt.type="text";txt.value=it.txt||"";txt.placeholder="What are we doing?";txt.addEventListener("input",function(){it.txt=txt.value;saveItin();});
-    var note=el("input","ie-note");note.type="text";note.value=it.note||"";note.placeholder="Note (optional)";note.addEventListener("input",function(){it.note=note.value;saveItin();});
+    var notesWrap=el("div","ie-notes");
+    function buildNoteRow(k){
+      var nr=el("div","ie-note-row");
+      var ni=el("input");ni.type="text";ni.value=it.notes[k]||"";ni.placeholder="Note (optional)";
+      (function(k){ni.addEventListener("input",function(){it.notes[k]=ni.value;saveItin();});})(k);
+      var nd=el("button","ie-note-del");nd.type="button";nd.textContent="✕";nd.setAttribute("aria-label","Remove note");
+      (function(k,nr){nd.addEventListener("click",function(){it.notes.splice(k,1);saveItin();nr.parentNode.removeChild(nr);});})(k,nr);
+      nr.appendChild(ni);nr.appendChild(nd);
+      return nr;
+    }
+    var addNoteBtn=el("button","ie-add-note");addNoteBtn.type="button";addNoteBtn.textContent="+ Add note";
+    addNoteBtn.addEventListener("click",function(){it.notes.push("");saveItin();var k=it.notes.length-1;notesWrap.insertBefore(buildNoteRow(k),addNoteBtn);});
+    it.notes.forEach(function(_,k){notesWrap.appendChild(buildNoteRow(k));});
+    notesWrap.appendChild(addNoteBtn);
+    var mapurlIn=el("input");mapurlIn.type="text";mapurlIn.value=it.mapUrl||"";mapurlIn.placeholder="Google Maps link (optional — paste a share URL)";mapurlIn.addEventListener("input",function(){it.mapUrl=mapurlIn.value.trim();saveItin();});
     var bsel=el("select","ie-badge");
     BADGES.forEach(function(b){var o=el("option");o.value=b.v;o.textContent=b.t;if((it.badge||"")===b.v)o.selected=true;bsel.appendChild(o);});
     bsel.addEventListener("change",function(){it.badge=bsel.value;saveItin();});
-    fields.appendChild(txt);fields.appendChild(note);fields.appendChild(bsel);
+    fields.appendChild(txt);fields.appendChild(notesWrap);fields.appendChild(mapurlIn);fields.appendChild(bsel);
     var del=el("button","ie-del");del.type="button";del.textContent="✕";del.setAttribute("aria-label","Delete activity");
     del.addEventListener("click",function(){items.splice(j,1);saveItin();redraw();});
     row.appendChild(mv);row.appendChild(tin);row.appendChild(fields);row.appendChild(del);
@@ -971,7 +1060,7 @@
       enableDrag(rowsC,items,redraw);
       wrap.appendChild(rowsC);
       var add=el("button","add-item");add.type="button";add.textContent="+ Add activity";
-      add.addEventListener("click",function(){items.push({id:"n"+Date.now()+"-"+Math.floor(Math.random()*1000),time:"",txt:"",note:"",badge:"",geo:null,done:false});saveItin();redraw();});
+      add.addEventListener("click",function(){items.push({id:"n"+Date.now()+"-"+Math.floor(Math.random()*1000),time:"",txt:"",notes:[],badge:"",mapUrl:"",geo:null,done:false});saveItin();redraw();});
       var reset=el("button","reset-day");reset.type="button";reset.textContent="Reset to suggestions";
       reset.addEventListener("click",function(){if(confirm("Replace this day's activities with the original suggestions?")){ITIN[i]=seedItin()[i];saveItin();redraw();}});
       var tools=el("div","ie-tools");tools.appendChild(add);tools.appendChild(reset);
@@ -996,6 +1085,7 @@
     var box=el("div","items-box");
     editBtn.addEventListener("click",function(){
       EDITING[i]=!EDITING[i];
+      if(!EDITING[i])ITIN[i].forEach(function(it){if(Array.isArray(it.notes))it.notes=it.notes.filter(Boolean);});
       editBtn.textContent=EDITING[i]?"Done":"Edit";
       card.classList.toggle("editing",!!EDITING[i]);
       renderDayItems(i,box);
@@ -1004,6 +1094,7 @@
     title.appendChild(editBtn);
     body.appendChild(title);
     if(d.sub)body.appendChild(el("div","dsub",d.sub));
+    var chipEl=el("div","hotel-chips");CHIP_ELS[i]=chipEl;renderHotelChip(i,chipEl);body.appendChild(chipEl);
     renderDayItems(i,box);
     body.appendChild(box);
     if(d.tips&&d.tips.length){var tips=el("div","tips");d.tips.forEach(function(t){tips.appendChild(el("div","tip",'<span class="ic">◆</span><span>'+t+'</span>'));});body.appendChild(tips);}
@@ -1029,7 +1120,7 @@
     });
   })();
   function addToDay(i,place){
-    ITIN[i].push({id:"p"+Date.now()+"-"+Math.floor(Math.random()*1000),time:"",txt:place.name||"Place",note:"",badge:"",geo:(place.lat!=null&&!isNaN(place.lat))?[place.lat,place.lng]:null,done:false});
+    ITIN[i].push({id:"p"+Date.now()+"-"+Math.floor(Math.random()*1000),time:"",txt:place.name||"Place",notes:[],badge:"",mapUrl:"",geo:(place.lat!=null&&!isNaN(place.lat))?[place.lat,place.lng]:null,done:false});
     saveItin();
     var box=document.querySelector("#day-"+i+" .items-box");
     if(box)renderDayItems(i,box);
@@ -1038,17 +1129,88 @@
     if(card){card.scrollIntoView({behavior:"smooth",block:"center"});card.classList.remove("flash");void card.offsetWidth;card.classList.add("flash");}
   }
 
-  // ---- prep checklist ----
-  var checks=document.getElementById("checks");
-  PREP.forEach(function(p,i){
-    var key="prep:"+i;
-    var lab=el("label","check");
-    var box=el("input");box.type="checkbox";box.className="box";box.checked=LS.get(key)==="1";
-    box.addEventListener("change",function(){if(box.checked)LS.set(key,"1");else LS.del(key);});
-    var l=el("span","lab",'<span class="t">'+p[0]+'</span><span class="d">'+p[1]+'</span>');
-    lab.appendChild(box);lab.appendChild(l);
-    checks.appendChild(lab);
+  // ---- before you go — editable checklist + tips ----
+  var FACTS_DEFAULT=[
+    {title:"Getting around",body:"Grab <strong>Suica / ICOCA</strong> IC cards (or add Suica to Apple/Google Wallet) and tap onto everything. Google Maps transit directions are gospel here."},
+    {title:"Bullet trains",body:"A JR Pass rarely pays off for this trip — book <strong>point-to-point Nozomi</strong> tickets and reserve seats. Buy an <em>ekiben</em> bento for the ride."},
+    {title:"Money",body:"Carry some cash; many small spots are cash-only. <strong>7-Bank ATMs</strong> in every konbini take foreign cards."},
+    {title:"Travelling with a 9-yo",body:"One big thing + one calm thing per day. Forward luggage city-to-city with <strong>takkyubin</strong> so no one drags suitcases up station stairs."}
+  ];
+  function getBYGItems(){var r=LS.get("byg_items","");if(!r)return PREP.map(function(p){return{title:p[0],desc:p[1]};});try{var a=JSON.parse(r);if(Array.isArray(a))return a;}catch(e){}return PREP.map(function(p){return{title:p[0],desc:p[1]};});}
+  function getBYGFacts(){var r=LS.get("byg_facts","");if(!r)return FACTS_DEFAULT.map(function(f){return{title:f.title,body:f.body};});try{var a=JSON.parse(r);if(Array.isArray(a))return a;}catch(e){}return FACTS_DEFAULT.map(function(f){return{title:f.title,body:f.body};});}
+  function saveBYGItems(a){LS.set("byg_items",JSON.stringify(a));}
+  function saveBYGFacts(a){LS.set("byg_facts",JSON.stringify(a));}
+  var bygEditing=false;
+  function renderBYG(){
+    var checksEl=document.getElementById("checks");
+    var factsEl=document.getElementById("factsGrid");
+    if(!checksEl||!factsEl)return;
+    checksEl.innerHTML="";factsEl.innerHTML="";
+    var items=getBYGItems(),facts=getBYGFacts();
+    if(!bygEditing){
+      items.forEach(function(p,i){
+        var key="prep:"+i;
+        var lab=el("label","check");
+        var box=el("input");box.type="checkbox";box.className="box";box.checked=LS.get(key)==="1";
+        box.addEventListener("change",function(){if(box.checked)LS.set(key,"1");else LS.del(key);});
+        var l=el("span","lab",'<span class="t">'+esc(p.title)+'</span>'+(p.desc?'<span class="d">'+esc(p.desc)+'</span>':''));
+        lab.appendChild(box);lab.appendChild(l);checksEl.appendChild(lab);
+      });
+      facts.forEach(function(f){
+        var div=el("div","info");
+        div.innerHTML='<h4><span class="d"></span>'+esc(f.title)+'</h4><p>'+f.body+'</p>';
+        factsEl.appendChild(div);
+      });
+    }else{
+      var rows=el("div","byg-edit-rows");
+      items.forEach(function(p,i){
+        var row=el("div","byg-item-row");
+        var fields=el("div","byg-item-fields");
+        var tin=el("input","byg-field");tin.type="text";tin.value=p.title||"";tin.placeholder="Item title";
+        tin.addEventListener("input",function(){p.title=tin.value;saveBYGItems(items);});
+        var din=el("input","byg-field");din.type="text";din.value=p.desc||"";din.placeholder="Description (optional)";
+        din.addEventListener("input",function(){p.desc=din.value;saveBYGItems(items);});
+        fields.appendChild(tin);fields.appendChild(din);
+        var del=el("button","byg-del");del.type="button";del.textContent="✕";del.setAttribute("aria-label","Delete item");
+        (function(idx){del.addEventListener("click",function(){items.splice(idx,1);saveBYGItems(items);renderBYG();});})(i);
+        row.appendChild(fields);row.appendChild(del);rows.appendChild(row);
+      });
+      var tools=el("div","byg-tools");
+      var addBtn=el("button","byg-add");addBtn.type="button";addBtn.textContent="+ Add item";
+      addBtn.addEventListener("click",function(){items.push({title:"",desc:""});saveBYGItems(items);renderBYG();});
+      var rstBtn=el("button","byg-reset");rstBtn.type="button";rstBtn.textContent="Reset checklist to defaults";
+      rstBtn.addEventListener("click",function(){if(confirm("Reset the booking checklist to the original suggestions?")){LS.del("byg_items");renderBYG();}});
+      tools.appendChild(addBtn);tools.appendChild(rstBtn);
+      checksEl.appendChild(rows);checksEl.appendChild(tools);
+
+      var sep=el("hr","byg-edit-sep");factsEl.appendChild(sep);
+      var frows=el("div","byg-edit-rows");
+      facts.forEach(function(f,i){
+        var row=el("div","byg-item-row");
+        var fields=el("div","byg-item-fields");
+        var tin=el("input","byg-field");tin.type="text";tin.value=f.title||"";tin.placeholder="Tile title";
+        tin.addEventListener("input",function(){f.title=tin.value;saveBYGFacts(facts);});
+        var ba=el("textarea","byg-field byg-fact-body");ba.value=f.body||"";ba.placeholder="Content — plain text, or HTML tags like <strong> and <em>";
+        ba.addEventListener("input",function(){f.body=ba.value;saveBYGFacts(facts);});
+        fields.appendChild(tin);fields.appendChild(ba);
+        var del=el("button","byg-del");del.type="button";del.textContent="✕";del.setAttribute("aria-label","Delete tile");
+        (function(idx){del.addEventListener("click",function(){facts.splice(idx,1);saveBYGFacts(facts);renderBYG();});})(i);
+        row.appendChild(fields);row.appendChild(del);frows.appendChild(row);
+      });
+      var ftools=el("div","byg-tools");
+      var faddBtn=el("button","byg-add");faddBtn.type="button";faddBtn.textContent="+ Add tip tile";
+      faddBtn.addEventListener("click",function(){facts.push({title:"",body:""});saveBYGFacts(facts);renderBYG();});
+      var frstBtn=el("button","byg-reset");frstBtn.type="button";frstBtn.textContent="Reset tips to defaults";
+      frstBtn.addEventListener("click",function(){if(confirm("Reset the tips section to the original content?")){LS.del("byg_facts");renderBYG();}});
+      ftools.appendChild(faddBtn);ftools.appendChild(frstBtn);
+      factsEl.appendChild(frows);factsEl.appendChild(ftools);
+    }
+  }
+  var bygEditBtn=document.getElementById("bygEditBtn");
+  bygEditBtn.addEventListener("click",function(){
+    bygEditing=!bygEditing;bygEditBtn.textContent=bygEditing?"Done":"Edit";renderBYG();
   });
+  renderBYG();
 
   // ---- countdown ----
   (function(){
@@ -1433,7 +1595,7 @@
   initCitySpine();
 
   // ---- backup: export / import ----
-  var PREFIX=["chk:","note:","prep:","mapUrl","pins","theme","stays","itin"];
+  var PREFIX=["chk:","note:","prep:","mapUrl","pins","theme","stays","itin","byg_items","byg_facts"];
   function isOurs(k){return PREFIX.some(function(p){return k===p||k.indexOf(p)===0;});}
   function exportData(){
     var data={};
@@ -1483,7 +1645,7 @@
     }catch(e){return "";}
   }
   var STAYS=getStays();
-  function persist(rerender){setStays(STAYS);renderCoverage();if(rerender){renderStays();if(typeof refreshHotelMarkers==="function")refreshHotelMarkers();}}
+  function persist(rerender){setStays(STAYS);renderCoverage();if(rerender){renderStays();if(typeof refreshHotelMarkers==="function")refreshHotelMarkers();}renderAllHotelChips();}
   function cityBooked(k){return STAYS.some(function(s){return s.city===k&&s.status==="booked";});}
   function locateStay(s,cb){
     geocode((s.name||"")+" "+(CITIES[s.city]?CITIES[s.city].name:"")+" Japan",function(hit){
